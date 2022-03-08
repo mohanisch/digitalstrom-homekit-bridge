@@ -1,0 +1,16 @@
+import logging
+
+from .digitalstrom import DsWebsocket
+from .digitalstrom.device_collector import DssCollector
+
+from .homekit import homekit
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(name)s.%(funcName)s : %(levelname)-8s [%(process)d] %(message)s',
+)
+
+homekit.setup()
+dswebsocket = DsWebsocket(homekit_driver=homekit.driver)
