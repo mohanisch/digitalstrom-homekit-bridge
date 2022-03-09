@@ -1,0 +1,26 @@
+variables:
+  VERSION: "2.0.2"
+
+docker-build:
+  image: jdrouet/docker-with-buildx:stable
+  stage: build
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_DRIVER: overlay2
+  services:
+    - docker:dind
+  before_script:
+    - echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
+  script:
+    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use
+    - |
+        docker buildx build --push --platform linux/amd64,linux/arm/v7 \
+          --tag "${CI_REGISTRY_IMAGE}:${VERSION}" \
+          --tag "${CI_REGISTRY_IMAGE}:latest" \
+          --tag "${DOCKERHUB_USERNAME}/${CI_PROJECT_NAME}:${VERSION}" \
+          --tag "${DOCKERHUB_USERNAME}/${CI_PROJECT_NAME}:latest" \
+          .
+  rules:
+    - if: $CI_COMMIT_BRANCH
+      exists:
+        - Dockerfile
