@@ -12,6 +12,7 @@ RUN apk update && apk add --no-cache \
     libevent-dev \
     build-base \
     openssl-dev \
+    cargo
 
 RUN pip install --upgrade pip && \
     pip3 install websocket pyhap hap-python fnvhash pyqrcode
