@@ -1,7 +1,17 @@
-FROM alpine:3.15
+ARG ARCH=
+FROM ${ARCH}alpine:3.15
 
-RUN apk update
-RUN apk add --no-cache python3 py-pip python3-dev libffi-dev gcc musl-dev make libevent-dev build-base openssl-dev
-RUN pip install --upgrade pip
+RUN apk update && apk add --no-cache \
+    python3 \
+    py-pip \
+    python3-dev \
+    libffi-dev \
+    gcc \
+    musl-dev \
+    make \
+    libevent-dev \
+    build-base \
+    openssl-dev \
 
-RUN pip3 install websocket pyhap hap-python fnvhash pyqrcode
+RUN pip install --upgrade pip && \
+    pip3 install websocket pyhap hap-python fnvhash pyqrcode
