@@ -3,18 +3,12 @@ FROM ${ARCH}alpine:3.15
 
 RUN apk update && apk add --no-cache \
     python3 \
-    py-pip \
-    python3-dev \
-    libffi-dev \
     gcc \
-    musl-dev \
-    make \
-    libevent-dev \
-    build-base \
-    openssl-dev \
-    cargo \
-    libressl-dev \
-    libffi-dev
+    py3-pip \
+    python3-dev \
+    py3-cryptography \
+    py3-gevent \
+    musl-dev
 
-RUN pip install --upgrade pip && \
+RUN pip3 install --upgrade pip && \
     pip3 install websocket pyhap hap-python fnvhash pyqrcode
