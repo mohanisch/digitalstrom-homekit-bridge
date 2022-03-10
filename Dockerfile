@@ -12,3 +12,10 @@ RUN apk update && apk add --no-cache \
 
 RUN pip3 install --upgrade pip && \
     pip3 install websocket pyhap hap-python fnvhash pyqrcode
+
+RUN mkdir -p /opt/digitalstrom
+
+COPY dsHomekit.py dsHomekit /opt/digitalstrom
+
+#ENTRYPOINT ['/usr/bin/python3']
+#CMD ['/opt/digitalstrom/dsHomekit.py']
