@@ -101,7 +101,11 @@ class HomeAccessory(Accessory):
     def __init__(self, driver, display_name, aid=None):
         super().__init__(driver, display_name, aid)
 
-
+    def async_update_state(self, new_state):
+        """Handle state change to update HomeKit value.
+        Overridden by accessory types.
+        """
+        raise NotImplementedError()
 
     def async_update_event_state_callback(self, event):
         """Handle state change event listener callback."""
