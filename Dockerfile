@@ -15,7 +15,10 @@ RUN pip3 install --upgrade pip && \
 
 RUN mkdir -p /opt/digitalstrom
 
-COPY dsHomekit.py dsHomekit /opt/digitalstrom
+COPY dsHomekit.py dsHomekit /opt/digitalstrom/
+RUN chmod +x /opt/digitalstrom/dsHomekit.py
+
+WORKDIR /opt/digitalstrom
 
 #ENTRYPOINT ['/usr/bin/python3']
 #CMD ['/opt/digitalstrom/dsHomekit.py']
