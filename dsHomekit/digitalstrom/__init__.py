@@ -6,7 +6,6 @@ import json
 from dsHomekit import config
 from dsHomekit.digitalstrom import request_handler
 from dsHomekit.digitalstrom.device_collector import DssCollector
-from dsHomekit.utils.helper import threaded
 
 collector = DssCollector()
 
@@ -14,7 +13,7 @@ collector = DssCollector()
 class DsWebsocket(object):
     def __init__(self, homekit_driver):
         self.wshost = "ws://{0}:{1}/api/v1/apartment/notifications".format(
-            config.TARGET, config.WS_PORT)
+            config.args.hostname, config.args.ws_port)
         self.homekit_driver = homekit_driver
 
 

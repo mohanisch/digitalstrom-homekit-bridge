@@ -7,30 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dsHomekit import dswebsocket, digitalstrom
 from dsHomekit.homekit import homekit
 
-from .const import REQUIRED_PYTHON_VER, RESTART_EXIT_CODE
-
-
-def get_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Homekit bridge for digitalStrom",
-        epilog=f"If restart is requested, exits with code {RESTART_EXIT_CODE}",
-    )
-    parser.add_argument(
-        "--hostname", help="Hostname or ip-address of digitalStrom server", default="dss.local"
-    )
-    parser.add_argument(
-        "--http-port", help="Port to reach digitalStrom http server, default 8080", default="8080"
-    )
-    parser.add_argument(
-        "--ws-port", help="Port to reach digitalStrom websocket, default 8090", default="8090"
-    )
-    parser.add_argument(
-        "--token", help="Token created on dss", default="dss.local"
-    )
-
-    arguments = parser.parse_args()
-
-    return arguments
+from .const import REQUIRED_PYTHON_VER
 
 
 def validate_python() -> None:
@@ -63,7 +40,6 @@ def run_io_tasks_in_parallel(tasks):
 
 def main():
     validate_python()
-    args = get_arguments()
 
     dsdevices = digitalstrom.collector.get_devices()
 

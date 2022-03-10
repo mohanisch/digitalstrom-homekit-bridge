@@ -5,10 +5,13 @@ from .digitalstrom.device_collector import DssCollector
 
 from .homekit import homekit
 import urllib3
+
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+from dsHomekit import config
+
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, config.args.loglevel.upper()),
     format='%(asctime)s %(name)s.%(funcName)s : %(levelname)-8s [%(process)d] %(message)s',
 )
 

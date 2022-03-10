@@ -9,9 +9,9 @@ def request(uri="", method="GET", payload=b''):
     _base_uri = "api/v1"
 
     url = "https://{0}:{1}/{2}/apartment/{3}".format(
-        config.TARGET, config.HTTP_PORT, _base_uri, uri)
+        config.args.hostname, config.args.http_port, _base_uri, uri)
     headers = {
-        "Authorization": "Bearer %s" % config.TOKEN
+        "Authorization": "Bearer %s" % config.args.token
     }
     if method == "GET":
         response = requests.get(
