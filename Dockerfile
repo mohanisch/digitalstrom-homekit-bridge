@@ -15,7 +15,7 @@ RUN pip3 install --upgrade pip && \
 
 RUN mkdir -p /opt/digitalstrom
 
-COPY dsHomekit.py dsHomekit /opt/digitalstrom/
+COPY . /opt/digitalstrom/
 RUN chmod +x /opt/digitalstrom/dsHomekit.py
 
 WORKDIR /opt/digitalstrom
