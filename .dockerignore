@@ -3,5 +3,3 @@
 .gitlab-ci.yml
 Dockerfile
 README.md
-requirements.txt
-setup.py

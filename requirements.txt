@@ -1,8 +1,9 @@
-setuptools~=60.5.0
-PyQRCode~=1.2.1
-pyhap~=0.1.1
-fnvhash~=0.1.0
-urllib3~=1.26.4
-websocket~=0.2.1
-websocket-client~=1.2.3
-requests~=2.27.1
+setuptools
+PyQRCode
+pyhap
+hap-python
+fnvhash
+urllib3
+websocket
+websocket-client
+requests
