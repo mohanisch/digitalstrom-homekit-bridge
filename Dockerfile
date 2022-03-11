@@ -12,7 +12,7 @@ RUN apk add --no-cache \
     && pip3 install --upgrade pip
 
 COPY . /tmp
-RUN (cd /tmp; python3 setup.py build && python3 setup.py install)
+RUN (cd /tmp; python3 setup.py build && python3 setup.py install) \
     && rm -rf /tmp/*
 
 WORKDIR /data
