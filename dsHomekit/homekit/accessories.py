@@ -17,7 +17,7 @@ def get_accessory(driver, device, aid):
     if device['service'] == "alarm_control_panel":
         a_type = "SecuritySystem"
 
-    elif device['service'] == "windowcover":
+    elif device['service'] == "shades":
 
         # device_class = state.attributes.get(ATTR_DEVICE_CLASS)
 
@@ -45,7 +45,7 @@ def get_accessory(driver, device, aid):
     # elif state.domain == "fan":
     #     a_type = "Fan"
     #
-    elif device['service'] == "light":
+    elif device['service'] == "lights":
         a_type = "Light"
 
     elif device['service'] == "sensor":
@@ -90,7 +90,7 @@ def get_accessory(driver, device, aid):
         return None
 
     logging.info('Add "%s (%s)" as "%s"', name, device['dsuid'], a_type)
-    return TYPES[a_type](driver, name, aid, dsuid=device['dsuid'], chars=device['chars'])
+    return TYPES[a_type](driver, name, aid, dsuid=device['dsuid'], chars=device['chars'], support=device['support'])
 
 
 class HomeAccessory(Accessory):

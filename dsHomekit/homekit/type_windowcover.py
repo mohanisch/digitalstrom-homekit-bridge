@@ -22,7 +22,7 @@ class WindowsCovering(Accessory):
 
     category = CATEGORY_WINDOW_COVERING
 
-    def __init__(self, *args, dsuid=None, chars=None):
+    def __init__(self, *args, dsuid=None, chars=None, support=None):
         """Initialize a WindowsCovering accessory object."""
         super().__init__(*args)
 

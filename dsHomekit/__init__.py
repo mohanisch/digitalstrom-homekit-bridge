@@ -4,10 +4,6 @@ from .digitalstrom import DsWebsocket
 from .digitalstrom.device_collector import DssCollector
 
 from .homekit import homekit
-import urllib3
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 from dsHomekit import config
 
 logging.basicConfig(
@@ -16,4 +12,4 @@ logging.basicConfig(
 )
 
 homekit.setup()
-dswebsocket = DsWebsocket(homekit_driver=homekit.driver)
+dswebsocket = DsWebsocket()

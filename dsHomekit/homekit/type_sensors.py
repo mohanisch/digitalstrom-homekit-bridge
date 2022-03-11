@@ -8,7 +8,7 @@ from dsHomekit.homekit.accessories import TYPES
 class TemperatureSensor(Accessory):
     category = CATEGORY_SENSOR
 
-    def __init__(self, *args, dsuid=None, chars=None):
+    def __init__(self, *args, dsuid=None, chars=None, support=None):
         super().__init__(*args)
 
         self.chars = chars
@@ -33,7 +33,7 @@ class TemperatureSensor(Accessory):
 class HumiditySensor(Accessory):
     category = CATEGORY_SENSOR
 
-    def __init__(self, *args, dsuid=None, chars=None):
+    def __init__(self, *args, dsuid=None, chars=None, support=None):
         super().__init__(*args)
 
         self.chars = chars
@@ -57,7 +57,7 @@ class HumiditySensor(Accessory):
 class LightSensor(Accessory):
     category = CATEGORY_SENSOR
 
-    def __init__(self, *args, dsuid=None, chars=None):
+    def __init__(self, *args, dsuid=None, chars=None, support=None):
         super().__init__(*args)
 
         self.chars = chars

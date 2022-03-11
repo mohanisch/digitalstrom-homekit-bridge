@@ -1,7 +1,11 @@
 import time
 
 from dsHomekit.digitalstrom import request_handler
-from .const import DEVICES_CHARS
+
+if __name__ == '__main__':
+    from const import DEVICES_CHARS
+else:
+    from .const import DEVICES_CHARS
 
 
 class DssCollector(object):
@@ -11,6 +15,7 @@ class DssCollector(object):
         self._devices = request_handler.request("dsDevices")
         self._function_blocks = request_handler.request("functionBlocks")
         self._zones = request_handler.request("zones")['zones']
+        self._submodules = request_handler.request("submodules")
 
         self._device_states = {}
 
@@ -33,25 +38,30 @@ class DssCollector(object):
         _devices = []
         for device in self._devices:
             function_attributes = ({v['id']: v['attributes'] for v in self._function_blocks}).get(device['id'])
+            application = ({v['id']: v['attributes']['application'] for v in self._submodules}).get(device['id'])
             device_chars = []
             device_mode = ""
-            device_type = ""
+            device_type = application
+            device_support = {}
 
             if 'outputs' in function_attributes:
+                functions = (
+                    {str(v['id']): v['attributes'] for v in function_attributes['outputs']}
+                )
+                if 'brightness' in functions:
+                    device_support['brightness'] = True if functions['brightness']['mode'] == 'gradual' else False
+                if 'hue' in functions:
+                    device_support['color'] = True
+                else:
+                    device_support['color'] = False
+
                 for chars in function_attributes['outputs']:
-                    if chars['id'] in ['hue', 'saturation', 'brightness']:
-                        device_chars.append(chars['id'].capitalize())
-                        device_type = "light"
                     if chars['id'] in ['shadePositionOutside']:
-                        device_type = "windowcover"
                         device_chars = DEVICES_CHARS[device_type][chars['attributes']['mode']]
                     device_mode = chars['attributes']['mode']
 
-            if device_type == "light":
-                device_chars.append('On')
 
-            zone = ({int(v['id']): v['name'] for v in self._transform_zones()}).get(int(device['attributes']['zone']))
-            if device_type:
+                zone = ({int(v['id']): v['name'] for v in self._transform_zones()}).get(int(device['attributes']['zone']))
                 d = {
                     "entity_id": device['id'] + "." + device_type,
                     "dsuid": device['id'],
@@ -61,7 +71,8 @@ class DssCollector(object):
                     "zone": zone,
                     "chars": device_chars,
                     "mode": device_mode,
-                    "service": device_type,
+                    "service": application,
+                    "support": device_support,
                     "model": function_attributes['technicalName']
                 }
                 _devices.append(d)
@@ -73,6 +84,7 @@ class DssCollector(object):
         for device in self._devices:
             function_attributes = ({v['id']: v['attributes'] for v in self._function_blocks}).get(device['id'])
             device_mode = ""
+            device_support = {}
 
             if 'sensorInputs' in function_attributes:
                 for chars in function_attributes['sensorInputs']:
@@ -93,6 +105,7 @@ class DssCollector(object):
                                 "zone": zone,
                                 "chars": device_chars,
                                 "mode": device_mode,
+                                "support": None,
                                 "service": 'sensor',
                                 "model": function_attributes['technicalName']
                             }
@@ -158,8 +171,8 @@ if __name__ == '__main__':
     devices = DssCollector()
     import json
 
-    bla = devices.gather_devices_status()
-    print(bla)
+    bla = devices._transform_output_devices()
+    #print(bla)
     print(json.dumps(bla,
                      sort_keys=True,
                      indent=4,

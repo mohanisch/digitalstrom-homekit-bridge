@@ -5,7 +5,7 @@ DEVICES_CHARS = {
         "colortemp": "Saturation",
         "hue": "Hue",
     },
-    "windowcover": {
+    "shades": {
         "positional": ['CurrentPosition', 'TargetPosition', 'PositionState']
     }
 }

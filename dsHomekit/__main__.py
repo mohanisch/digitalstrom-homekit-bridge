@@ -1,5 +1,3 @@
-import argparse
-import json
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor

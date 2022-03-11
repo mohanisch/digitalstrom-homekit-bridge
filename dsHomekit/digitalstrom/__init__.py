@@ -11,17 +11,14 @@ collector = DssCollector()
 
 
 class DsWebsocket(object):
-    def __init__(self, homekit_driver):
+    def __init__(self):
         self.wshost = "ws://{0}:{1}/api/v1/apartment/notifications".format(
             config.args.hostname, config.args.ws_port)
-        self.homekit_driver = homekit_driver
-
 
     @staticmethod
     def on_message(ws, message=''):
         _devices_updates = []
         _changed_devices = []
-         #_message = json.loads(re.sub(r'[\x1e]+', '', message))
 
         if len(message) > 3:
             collector.gather_devices_status()

@@ -12,7 +12,8 @@ from dsHomekit.utils.helper import threaded
 from dsHomekit.const import (
     STATE_ON,
     CHAR_ON,
-    CHAR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_COLOR_TEMP, COLOR_MODE_WHITE, ATTR_BRIGHTNESS, ATTR_COLOR_MODE
+    CHAR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_COLOR_TEMP, COLOR_MODE_WHITE, ATTR_BRIGHTNESS, ATTR_COLOR_MODE, CHAR_HUE,
+    CHAR_SATURATION
 )
 
 
@@ -20,7 +21,7 @@ from dsHomekit.const import (
 class Light(Accessory):
     category = CATEGORY_LIGHTBULB
 
-    def __init__(self, *args, dsuid=None, chars=None):
+    def __init__(self, *args, dsuid=None, chars=None, support=None):
         super().__init__(*args)
 
         self.chars = chars
@@ -34,10 +35,15 @@ class Light(Accessory):
 
         self.states = None
 
-        self.brightness_supported = True
-        self.color_supported = False
+        self.brightness_supported = support['brightness']
+        self.color_supported = support['color']
 
         self.states = collector.get_device_state(self.dsuid)
+
+        if self.brightness_supported:
+            self.chars.append(CHAR_BRIGHTNESS)
+        if self.color_supported:
+            self.chars.extend([CHAR_HUE, CHAR_SATURATION])
 
         serv_light = self.add_preload_service('Lightbulb', chars=self.chars)
         self.char_on = serv_light.configure_char(CHAR_ON, value=0)
@@ -45,14 +51,9 @@ class Light(Accessory):
         if self.brightness_supported:
             self.char_brightness = serv_light.configure_char(CHAR_BRIGHTNESS, value=100)
 
-        if 'Hue' in self.chars:
-            self.color_supported = True
-            self.char_hue = serv_light.configure_char(
-                'Hue', setter_callback=self.set_hue)
-
-        if 'Saturation' in self.chars:
-            self.char_saturation = serv_light.configure_char(
-                'Saturation', setter_callback=self.set_saturation)
+        if self.color_supported:
+            self.char_hue = serv_light.configure_char(CHAR_HUE, value=0)
+            self.char_saturation = serv_light.configure_char(CHAR_SATURATION, value=75)
 
         serv_light.setter_callback = self._set_chars
         self.async_update_state(self.states)
@@ -62,10 +63,13 @@ class Light(Accessory):
     def _set_chars(self, char_values):
         logging.debug("Light _set_chars: %s", char_values)
 
-        if self.char_on.value == 0 and self.char_brightness != 0:
+        if self.char_on.value == 0: # and self.char_brightness != 0:
             self.brightness = 0
         else:
-            self.brightness = self.char_brightness.value
+            if self.brightness_supported:
+                self.brightness = self.char_brightness.value
+            else:
+                self.brightness = 100
 
         # TODO: Muss anders funktionieren
         digitalstrom.patch_device(
@@ -88,20 +92,6 @@ class Light(Accessory):
                     'hue'
                 )
 
-    # def set_state(self, value):
-    #     self.accessory_state = value
-    #     if value:
-    #         self.accessory_state = value
-    #
-    #     if self.brightness == 0:
-    #         print("set_state: if ->", self.brightness)
-    #         self.brightness = self.char_brightness.value
-    #         self.set_brightness(self.brightness)
-    #     else:
-    #         print("set_state: else ->", self.brightness)
-    #         self.accessory_state = 0
-    #         self.set_brightness(0)
-
     def set_hue(self, value):
         # Lets only write the new RGB values if the power is on
         # otherwise update the hue value only
@@ -110,9 +100,9 @@ class Light(Accessory):
         else:
             self.hue = value
 
-    def set_brightness(self, value):
-        self.char_brightness.set_value(value)
-        # self.brightness = value
+    # def set_brightness(self, value):
+    #     self.char_brightness.set_value(value)
+    #     # self.brightness = value
 
     def set_saturation(self, value):
         self.saturation = value
@@ -172,15 +162,17 @@ class Light(Accessory):
 
                 if self.brightness != _value:
                     self.brightness = _value
-                    self.char_brightness.set_value(self.brightness)
+                    if self.brightness_supported:
+                        self.char_brightness.set_value(self.brightness)
 
     def async_update_state(self, new_state):
         """Update light after state change."""
+
         # Handle State
         state = new_state['states']['on']
         attributes = new_state['attributes']
 
-        self.char_on.set_value(int(state == STATE_ON))
+        self.char_on.set_value(state)
         self.accessory_state = state
 
         # color_mode = attributes.get(ATTR_COLOR_MODE)

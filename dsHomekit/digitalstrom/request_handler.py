@@ -1,7 +1,10 @@
 import json
 import requests
+import urllib3
 
 from dsHomekit import config
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def request(uri="", method="GET", payload=b''):
