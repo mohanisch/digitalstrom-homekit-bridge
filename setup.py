@@ -21,6 +21,13 @@ setup(
             "dsHomekit = dsHomekit.__main__:main",
         ]
     },
-    install_requires=["websocket", "pyhap", "hap-python", "fnvhash", "pyqrcode", "requests"],
+    install_requires=["websocket",
+                      "websocket-client",
+                      "pyhap",
+                      "hap-python",
+                      "fnvhash",
+                      "pyqrcode",
+                      "urllib3",
+                      "requests"],
     zip_safe=False
 )

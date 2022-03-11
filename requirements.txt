@@ -1,9 +1,0 @@
-setuptools
-PyQRCode
-pyhap
-hap-python
-fnvhash
-urllib3
-websocket
-websocket-client
-requests
