@@ -18,7 +18,7 @@ class TemperatureSensor(Accessory):
         serv_temp = self.add_preload_service('TemperatureSensor')
         self.char_temp = serv_temp.configure_char('CurrentTemperature')
 
-    @Accessory.run_at_interval(3)
+    @Accessory.run_at_interval(60)
     async def run(self):
         device_services = collector.get_device_state(self.dsuid)
         for char, values in device_services['states'].items():
@@ -43,7 +43,7 @@ class HumiditySensor(Accessory):
         serv_temp = self.add_preload_service('HumiditySensor')
         self.char_temp = serv_temp.configure_char('CurrentRelativeHumidity')
 
-    @Accessory.run_at_interval(4)
+    @Accessory.run_at_interval(60)
     async def run(self):
         device_services = collector.get_device_state(self.dsuid)
         for char, values in device_services['states'].items():

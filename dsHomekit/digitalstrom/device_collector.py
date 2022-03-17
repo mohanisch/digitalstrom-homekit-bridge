@@ -1,21 +1,21 @@
 import time
 
-from dsHomekit.digitalstrom import request_handler
+from .request_handler import DsRequest
+from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API
+from ..config import args
 
-if __name__ == '__main__':
-    from const import DEVICES_CHARS
-else:
-    from .const import DEVICES_CHARS
+session = DsRequest("https://" + args.hostname + ":" + args.http_port + "/")
 
 
 class DssCollector(object):
     """ Class to structure dS device and hold information of devices and it states """
 
     def __init__(self):
-        self._devices = request_handler.request("dsDevices")
-        self._function_blocks = request_handler.request("functionBlocks")
-        self._zones = request_handler.request("zones")['zones']
-        self._submodules = request_handler.request("submodules")
+        self._devices = session.get(SMART_HOME_API + "/dsDevices")['data']
+        self._function_blocks = session.get(SMART_HOME_API + "/functionBlocks")['data']
+        self._zones = session.get(SMART_HOME_API + "/zones")['data']['zones']
+        self._submodules = session.get(SMART_HOME_API + "/submodules")['data']
+        self._user_defined_states = session.get(SMART_HOME_API + "/userDefinedStates")['data']['userDefinedStates']
 
         self._device_states = {}
 
@@ -32,7 +32,7 @@ class DssCollector(object):
         return _device_state
 
     def get_devices(self):
-        return self._transform_output_devices() + self._transform_input_devices()
+        return self._transform_output_devices() + self._transform_input_devices() + self._transform_user_defined_states()
 
     def _transform_output_devices(self):
         _devices = []
@@ -60,8 +60,8 @@ class DssCollector(object):
                         device_chars = DEVICES_CHARS[device_type][chars['attributes']['mode']]
                     device_mode = chars['attributes']['mode']
 
-
-                zone = ({int(v['id']): v['name'] for v in self._transform_zones()}).get(int(device['attributes']['zone']))
+                zone = ({int(v['id']): v['name'] for v in self._transform_zones()}).get(
+                    int(device['attributes']['zone']))
                 d = {
                     "entity_id": device['id'] + "." + device_type,
                     "dsuid": device['id'],
@@ -84,7 +84,6 @@ class DssCollector(object):
         for device in self._devices:
             function_attributes = ({v['id']: v['attributes'] for v in self._function_blocks}).get(device['id'])
             device_mode = ""
-            device_support = {}
 
             if 'sensorInputs' in function_attributes:
                 for chars in function_attributes['sensorInputs']:
@@ -94,7 +93,8 @@ class DssCollector(object):
                         device_chars.append(chars['attributes']['type'].capitalize())
                         device_type = chars['attributes']['type']
 
-                        zone = ({int(v['id']): v['name'] for v in self._transform_zones()}).get(int(device['attributes']['zone']))
+                        zone = ({int(v['id']): v['name'] for v in self._transform_zones()}).get(
+                            int(device['attributes']['zone']))
                         if device_type:
                             s = {
                                 "entity_id": device['id'] + "." + device_type,
@@ -112,9 +112,34 @@ class DssCollector(object):
                             _input_devices.append(s)
         return _input_devices
 
+    def _transform_user_defined_states(self):
+        _user_defined_states = []
+
+        for user_defined_state in self._user_defined_states:
+            if user_defined_state['type'] == 'manualState' and user_defined_state['attributes']['visibleForUsers']:
+                device_type = 'button'
+
+                d = {
+                    "entity_id": user_defined_state['id'] + "." + user_defined_state['type'],
+                    "dsuid": user_defined_state['id'],
+                    "name": user_defined_state['attributes']['name'],
+                    "service": device_type,
+                    "chars": None,
+                    "support": None,
+                }
+                _user_defined_states.append(d)
+        return _user_defined_states
+
     def gather_devices_status(self):
-        devices_status_attributes = request_handler.request("dsDevices/status")
-        zones_status = request_handler.request("zones/status")
+        devices_status_attributes = session.get(SMART_HOME_API + "/dsDevices/status")['data']
+        zones_status = session.get(SMART_HOME_API + "/zones/status")['data']
+
+        params = {
+            "query": "/usr/addon-states/system-addon-user-defined-states/*(*)",
+            "token": session.get_token()
+        }
+        user_defined_states = session.get(PROPERTY_API + "/query", params=params)['result']
+
         last_change = int(time.time())
 
         for device in devices_status_attributes:
@@ -142,7 +167,8 @@ class DssCollector(object):
         for device in self._transform_input_devices():
             if device['service'] == 'sensor':
                 _states = {}
-                zone_measurements = ({v['id']: v for v in zones_status}).get(device['zoneid'])['attributes']['measurements']
+                zone_measurements = ({v['id']: v for v in zones_status}).get(device['zoneid'])['attributes'][
+                    'measurements']
 
                 for dsuid, value in zone_measurements.items():
                     _states[dsuid] = {
@@ -150,8 +176,18 @@ class DssCollector(object):
                     }
                 s = {device['dsuid']: {
                     "states": _states,
+                    "last_change": last_change
                 }}
                 self._device_states.update(s)
+
+        _user_defined_states = {}
+        for user_state in user_defined_states['system-addon-user-defined-states']:
+            _user_defined_states[user_state['name']] = {
+                "state": "on" if user_state['state'] == "active" else "off",
+                "last_change": last_change
+            }
+        self._device_states.update(_user_defined_states)
+
         return self._device_states
 
     def _transform_zones(self):
@@ -166,15 +202,14 @@ class DssCollector(object):
                 zones.append(cleaned)
         return zones
 
-
-if __name__ == '__main__':
-    devices = DssCollector()
-    import json
-
-    bla = devices._transform_output_devices()
-    #print(bla)
-    print(json.dumps(bla,
-                     sort_keys=True,
-                     indent=4,
-                     separators=(',', ': ')
-                     ))
+# #if __name__ == '__main__':
+# devices = DssCollector()
+# import json
+#
+# bla = devices.gather_devices_status()
+# #print(bla)
+# print(json.dumps(bla,
+#                  sort_keys=True,
+#                  indent=4,
+#                  separators=(',', ': ')
+#                  ))

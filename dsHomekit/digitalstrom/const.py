@@ -9,3 +9,7 @@ DEVICES_CHARS = {
         "positional": ['CurrentPosition', 'TargetPosition', 'PositionState']
     }
 }
+
+SMART_HOME_API = "api/v1/apartment"
+PROPERTY_API = "json/property"
+SYSTEM_API = "json/system"

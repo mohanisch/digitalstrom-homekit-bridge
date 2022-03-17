@@ -11,9 +11,8 @@ from pyhap.util import callback
 from dsHomekit import config
 from .accessories import get_accessory
 from .aid_manager import AccessoryAidStorage
-from . import type_lights, type_windowcover, type_sensors
+from . import type_lights, type_windowcover, type_sensors, type_switch
 from .util import async_show_setup_message
-from ..const import RESTART_EXIT_CODE
 from ..core import Event
 
 

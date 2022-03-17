@@ -4,8 +4,14 @@ import _thread
 import json
 
 from dsHomekit import config
-from dsHomekit.digitalstrom import request_handler
 from dsHomekit.digitalstrom.device_collector import DssCollector
+from .const import SMART_HOME_API
+
+from .request_handler import DsRequest
+from ..config import args
+
+s = DsRequest("https://" + args.hostname + ":" + args.http_port + "/")
+
 
 collector = DssCollector()
 
@@ -74,8 +80,20 @@ def patch_device(dsuid: str, value: int, output_id: str = "brightness"):
     if output_id == 'brightness' and (value == 100 or value == 0):
         payload_raw.append(device_scenario)
         payload = json.dumps(device_scenario).encode("UTF-8")
-        request_handler.request('scenarios/invoke', "POST", payload)
+        s.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
     else:
         payload_raw.append(device_attributes)
         payload = json.dumps(payload_raw).encode("UTF-8")
-        request_handler.request('dsDevices/' + dsuid + '/status', "PATCH", payload)
+        s.patch(SMART_HOME_API + '/dsDevices/' + dsuid + '/status', data=payload)
+
+
+def patch_switch(user_defined_state_id: str, state: bool):
+    print(user_defined_state_id, state)
+    switch_attributes = {
+        "op": "replace",
+        "path": "/status",
+        "value": "active" if state else "inactive"
+    }
+    payload_raw = [switch_attributes]
+    payload = json.dumps(payload_raw).encode("UTF-8")
+    s.patch('userDefinedStates/' + user_defined_state_id + '/status', payload=payload)

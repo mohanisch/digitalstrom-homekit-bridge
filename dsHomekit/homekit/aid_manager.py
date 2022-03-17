@@ -1,10 +1,6 @@
 import random
-from _ast import Store
 
 from fnvhash import fnv1a_32
-from pyhap.util import callback
-
-import dsHomekit
 
 INVALID_AIDS = (0, 1)
 
@@ -26,7 +22,6 @@ def _generate_aids(unique_id: str) -> int:
 
 
 class AccessoryAidStorage:
-
     def __init__(self) -> None:
         """Create a new entity map store."""
         self.allocations = {}
@@ -62,18 +57,3 @@ class AccessoryAidStorage:
         aid = self.allocations.pop(storage_key)
         self.allocated_aids.discard(aid)
         self.async_schedule_save()
-
-
-    # @callback
-    # def async_schedule_save(self):
-    #     """Schedule saving the entity map cache."""
-    #     self.store.async_delay_save(self._data_to_save, 2)
-    #
-    # async def async_save(self):
-    #     """Save the entity map cache."""
-    #     return await self.store.async_save(self._data_to_save())
-    #
-    # @callback
-    # def _data_to_save(self):
-    #     """Return data of entity map to store in a file."""
-    #     return {"ALLOCATIONS_KEY": self.allocations}

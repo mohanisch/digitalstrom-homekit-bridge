@@ -5,7 +5,7 @@ from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_LIGHTBULB
 
 from dsHomekit.digitalstrom import collector
-from dsHomekit.homekit.accessories import TYPES, HomeAccessory
+from dsHomekit.homekit.accessories import TYPES
 from dsHomekit import digitalstrom
 from dsHomekit.utils.helper import threaded
 

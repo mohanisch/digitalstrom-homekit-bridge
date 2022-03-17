@@ -17,9 +17,6 @@ def get_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--ws-port", help="Port to reach digitalStrom websocket, default 8090", default="8090"
     )
-    # parser.add_argument(
-    #     "--token", help="Token created on dss", default="dss.local", required=True
-    # )
     parser.add_argument(
         "--homekit-bridge-name", help="Name how the bridge should be appear in Home", default="dS Homebridge"
     )

@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import Callable, Hashable
 from typing import TypeVar
 
-CALLABLE_T = TypeVar("CALLABLE_T", bound=Callable)  # pylint: disable=invalid-name
+CALLABLE_T = TypeVar("CALLABLE_T", bound=Callable)
 
 
 class Registry(dict):
