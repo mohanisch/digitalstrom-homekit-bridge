@@ -9,10 +9,15 @@ RUN apk add --no-cache \
       py3-cryptography \
       py3-gevent \
       musl-dev \
-    && pip3 install --upgrade pip
+    && pip3 install --upgrade pip \
+    && pip3 install websocket HAP-python[QRCode]
 
 COPY . /tmp
-RUN (cd /tmp; python3 setup.py build && python3 setup.py install) \
+RUN ( \
+      cd /tmp \
+      && python3 setup.py build  \
+      && python3 setup.py install  \
+    ) \
     && rm -rf /tmp/*
 
 WORKDIR /data
