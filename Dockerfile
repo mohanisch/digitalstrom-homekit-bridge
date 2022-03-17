@@ -10,7 +10,7 @@ RUN apk add --no-cache \
       py3-gevent \
       musl-dev \
     && pip3 install --upgrade pip \
-    && pip3 install websocket HAP-python[QRCode]
+    && pip3 install websocket websocket-client HAP-python[QRCode]
 
 COPY . /tmp
 RUN ( \

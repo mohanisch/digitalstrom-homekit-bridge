@@ -15,6 +15,10 @@ s = DsRequest("https://" + args.hostname + ":" + args.http_port + "/")
 
 collector = DssCollector()
 
+import unicodedata
+def remove_control_characters(s):
+    return "".join(ch for ch in s if unicodedata.category(ch)[0]!="C")
+
 
 class DsWebsocket(object):
     def __init__(self):
@@ -22,13 +26,19 @@ class DsWebsocket(object):
             config.args.hostname, config.args.ws_port)
 
     @staticmethod
-    def on_message(ws, message=''):
+    def on_message(ws, message):
         _devices_updates = []
         _changed_devices = []
 
-        if len(message) > 3:
-            collector.gather_devices_status()
-            logging.debug("ws message:" + str(message))
+        _message = json.loads(remove_control_characters(message))
+
+        if "arguments" in _message:
+            if _message['arguments'][0]['type'] == 'apartmentStatusChanged':
+                logging.debug("Apartment status changed")
+                collector.gather_devices_status()
+
+            if _message['arguments'][0]['type'] == 'apartmentStructureChanged':
+                logging.debug("Apartment structure changed")
 
     def on_error(self, ws, error):
         logging.error(error)

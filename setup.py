@@ -28,6 +28,7 @@ setup(
                       "fnvhash",
                       "pyqrcode",
                       "urllib3",
-                      "requests"],
+                      "requests",
+                      "HAP-python[QRCode]"],
     zip_safe=False
 )
