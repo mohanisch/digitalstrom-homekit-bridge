@@ -48,13 +48,11 @@ class HomeKit:
 
     def setup(self):
         """Set up bridge and accessory driver."""
-
         logging.info("Setup HomeKit driver")
         self.driver = AccessoryDriver(
             port=self._port,
             persist_file=self.persist_file
         )
-
         self.bridge = Bridge(self.driver, self._name)
         self.driver.add_accessory(accessory=self.bridge)
 
@@ -67,7 +65,7 @@ class HomeKit:
             if acc is not None:
                 self.bridge.add_accessory(acc)
                 return acc
-        except Exception:  # pylint: disable=broad-except
+        except Exception:
             logging.exception("Failed to create a HomeKit accessory for %s (%s)", device['name'], device['dsuid'])
         return None
 
@@ -83,6 +81,9 @@ class HomeKit:
 
     def start(self):
         self.driver.start()
+
+    def stop(self):
+        self.driver.stop()
 
     def set_allocations(self):
         return self.aid_storage.allocations

@@ -54,6 +54,9 @@ class DsWebsocket(object):
             }
             ws.send(json.dumps(obj))
 
+            from dsHomekit import homekit
+            homekit.start()
+
         logging.info("Start websocket client")
         _thread.start_new_thread(run, ())
 

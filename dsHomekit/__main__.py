@@ -44,11 +44,7 @@ def main():
     for dsdevice in dsdevices:
         homekit.add_bridge_accessory(dsdevice)
 
-    run_io_tasks_in_parallel([
-        lambda: homekit.start(),
-        lambda: dswebsocket.start(),
-    ])
-
+    dswebsocket.start()
     check_threads()
 
 
