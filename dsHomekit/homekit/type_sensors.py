@@ -8,11 +8,11 @@ from dsHomekit.homekit.accessories import TYPES
 class TemperatureSensor(Accessory):
     category = CATEGORY_SENSOR
 
-    def __init__(self, *args, dsuid=None, chars=None, support=None):
+    def __init__(self, *args, device=None):
         super().__init__(*args)
 
-        self.chars = chars
-        self.dsuid = dsuid
+        self.chars = device['chars']
+        self.dsuid = device['dsuid']
         self.temperature = 0
 
         serv_temp = self.add_preload_service('TemperatureSensor')
@@ -33,11 +33,11 @@ class TemperatureSensor(Accessory):
 class HumiditySensor(Accessory):
     category = CATEGORY_SENSOR
 
-    def __init__(self, *args, dsuid=None, chars=None, support=None):
+    def __init__(self, *args, device=None):
         super().__init__(*args)
 
-        self.chars = chars
-        self.dsuid = dsuid
+        self.chars = device['chars']
+        self.dsuid = device['dsuid']
         self.humidity = 80
 
         serv_temp = self.add_preload_service('HumiditySensor')
@@ -57,11 +57,11 @@ class HumiditySensor(Accessory):
 class LightSensor(Accessory):
     category = CATEGORY_SENSOR
 
-    def __init__(self, *args, dsuid=None, chars=None, support=None):
+    def __init__(self, *args, device=None):
         super().__init__(*args)
 
-        self.chars = chars
-        self.dsuid = dsuid
+        self.chars = device['chars']
+        self.dsuid = device['dsuid']
         self.illuminance = 5
 
         serv_temp = self.add_preload_service('LightSensor')

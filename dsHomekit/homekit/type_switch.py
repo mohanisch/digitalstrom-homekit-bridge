@@ -15,11 +15,11 @@ from dsHomekit.utils.helper import threaded
 class Switch(Accessory):
     category = CATEGORY_SWITCH
 
-    def __init__(self, *args, dsuid=None, chars=None, support=None):
+    def __init__(self, *args, device=None):
         super().__init__(*args)
 
-        self.chars = chars
-        self.dsuid = dsuid
+        self.chars = device['chars']
+        self.dsuid = device['dsuid']
 
         self.accessory_state = False
 

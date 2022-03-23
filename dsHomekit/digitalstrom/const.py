@@ -13,3 +13,10 @@ DEVICES_CHARS = {
 SMART_HOME_API = "api/v1/apartment"
 PROPERTY_API = "json/property"
 SYSTEM_API = "json/system"
+
+HUE_CERTIFIED = [
+    "LCA001",
+    "LCT014",
+    "LCT015",
+    "LCT016"
+]

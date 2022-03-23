@@ -1,7 +1,7 @@
 import time
 
 from .request_handler import DsRequest
-from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API
+from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API, HUE_CERTIFIED
 from ..config import args
 
 session = DsRequest("https://" + args.hostname + ":" + args.http_port + "/")
@@ -89,7 +89,7 @@ class DssCollector(object):
                 for chars in function_attributes['sensorInputs']:
                     device_chars = []
 
-                    if 'type' in chars['attributes']:
+                    if 'type' in chars['attributes'] and chars['attributes']['usage'] == 'zone':
                         device_chars.append(chars['attributes']['type'].capitalize())
                         device_type = chars['attributes']['type']
 
@@ -167,18 +167,20 @@ class DssCollector(object):
         for device in self._transform_input_devices():
             if device['service'] == 'sensor':
                 _states = {}
-                zone_measurements = ({v['id']: v for v in zones_status}).get(device['zoneid'])['attributes'][
-                    'measurements']
 
-                for dsuid, value in zone_measurements.items():
-                    _states[dsuid] = {
-                        "value": value,
-                    }
-                s = {device['dsuid']: {
-                    "states": _states,
-                    "last_change": last_change
-                }}
-                self._device_states.update(s)
+                zone_attributes = ({v['id']: v for v in zones_status}).get(device['zoneid'])['attributes']
+                if 'measurements' in zone_attributes:
+                    zone_measurements = zone_attributes['measurements']
+
+                    for dsuid, value in zone_measurements.items():
+                        _states[dsuid] = {
+                            "value": value,
+                        }
+                    s = {device['dsuid']: {
+                        "states": _states,
+                        "last_change": last_change
+                    }}
+                    self._device_states.update(s)
 
         _user_defined_states = {}
         for user_state in user_defined_states['system-addon-user-defined-states']:

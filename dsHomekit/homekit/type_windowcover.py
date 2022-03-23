@@ -22,12 +22,12 @@ class WindowsCovering(Accessory):
 
     category = CATEGORY_WINDOW_COVERING
 
-    def __init__(self, *args, dsuid=None, chars=None, support=None):
+    def __init__(self, *args, device=None):
         """Initialize a WindowsCovering accessory object."""
         super().__init__(*args)
 
-        self.chars = chars
-        self.dsuid = dsuid
+        self.chars = device['chars']
+        self.dsuid = device['dsuid']
 
         self._supports_stop = True
         self._supports_tilt = False
@@ -40,6 +40,8 @@ class WindowsCovering(Accessory):
             self.chars.append('HoldPosition')
         if self._supports_tilt:
             self.chars.extend(['TargetHorizontalTiltAngle', 'CurrentHorizontalTiltAngle'])
+
+        self.chars.append('Name')
 
         self.serv_cover = self.add_preload_service('WindowCovering', chars=self.chars)
 
@@ -55,6 +57,10 @@ class WindowsCovering(Accessory):
             self.char_hold_position = self.serv_cover.configure_char(
                 'HoldPosition', setter_callback=self.set_stop
             )
+
+        self.char_name = self.serv_cover.configure_char(
+            'Name', value=device['name']
+        )
 
         self.char_current_position = self.serv_cover.configure_char(
             'CurrentPosition', 0)

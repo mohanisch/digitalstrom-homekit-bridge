@@ -21,22 +21,24 @@ from dsHomekit.const import (
 class Light(Accessory):
     category = CATEGORY_LIGHTBULB
 
-    def __init__(self, *args, dsuid=None, chars=None, support=None):
+    def __init__(self, *args, device=None):
         super().__init__(*args)
 
-        self.chars = chars
-        self.dsuid = dsuid
+        self.chars = device['chars']
+        self.dsuid = device['dsuid']
+        self.support = device['support']
         self.accessory_state = 0
         self.brightness = 100
         self.saturation = None
         self.hue = 255
+        self.xy = None
 
         self._subscriptions = []
 
         self.states = None
 
-        self.brightness_supported = support['brightness']
-        self.color_supported = support['color']
+        self.brightness_supported = self.support['brightness']
+        self.color_supported = self.support['color']
 
         self.states = collector.get_device_state(self.dsuid)
 
@@ -71,6 +73,8 @@ class Light(Accessory):
             else:
                 self.brightness = 100
 
+        self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
+
         # TODO: Muss anders funktionieren
         digitalstrom.patch_device(
             self.dsuid,
@@ -85,13 +89,23 @@ class Light(Accessory):
                     'saturation'
                 )
             if char == "Hue":
-                # TODO: Muss anders funktionieren
-                digitalstrom.patch_device(
-                    self.dsuid,
-                    self.char_hue.value,
-                    'hue'
-                )
-
+                if self.device_support['hue']:
+                    # TODO: Muss anders funktionieren
+                    digitalstrom.patch_device(
+                        self.dsuid,
+                        self.char_hue.value,
+                    )
+                else:
+                    digitalstrom.patch_device(
+                        self.dsuid,
+                        self.xy[0],
+                        'x'
+                    )
+                    digitalstrom.patch_device(
+                        self.dsuid,
+                        self.xy[1],
+                        'y'
+                    )
     def set_hue(self, value):
         # Lets only write the new RGB values if the power is on
         # otherwise update the hue value only
@@ -146,6 +160,14 @@ class Light(Accessory):
         m = v - C
 
         return int((RGB_Pri[0] + m) * 255), int((RGB_Pri[1] + m) * 255), int((RGB_Pri[2] + m) * 255)
+
+    def get_xy(self, h, s, v):
+        from rgbxy import Converter
+        rgb = self.hsv_to_rgb(h, s, v)
+        converter = Converter()
+        xy = converter.rgb_to_xy(rgb[0], rgb[1], rgb[2])
+        return xy[0], xy[1]
+
 
     @Accessory.run_at_interval(3)
     async def run(self):

@@ -43,4 +43,4 @@ def get_accessory(driver, device, aid):
         return None
 
     logging.info('Add "%s (%s)" as "%s"', name, device['dsuid'], a_type)
-    return TYPES[a_type](driver, name, aid, dsuid=device['dsuid'], chars=device['chars'], support=device['support'])
+    return TYPES[a_type](driver, name, aid, device=device)
