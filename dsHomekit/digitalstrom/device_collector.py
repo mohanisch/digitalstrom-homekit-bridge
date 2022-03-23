@@ -52,6 +52,7 @@ class DssCollector(object):
                     device_support['brightness'] = True if functions['brightness']['mode'] == 'gradual' else False
                 if 'hue' in functions:
                     device_support['color'] = True
+                    device_support['hue'] = True
                 else:
                     device_support['color'] = False
 
