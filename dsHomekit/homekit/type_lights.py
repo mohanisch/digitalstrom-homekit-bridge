@@ -65,7 +65,7 @@ class Light(Accessory):
     def _set_chars(self, char_values):
         logging.debug("Light _set_chars: %s", char_values)
 
-        if self.char_on.value == 0: # and self.char_brightness != 0:
+        if self.char_on.value == 0:  # and self.char_brightness != 0:
             self.brightness = 0
         else:
             if self.brightness_supported:
@@ -75,35 +75,26 @@ class Light(Accessory):
 
         # TODO: Muss anders funktionieren
         digitalstrom.patch_device(
-            self.dsuid,
-            self.brightness,
-            'brightness')
+            self.dsuid, self.brightness, 'brightness')
         for char, value in char_values.items():
             if char == "Saturation":
                 # TODO: Muss anders funktionieren
                 digitalstrom.patch_device(
-                    self.dsuid,
-                    self.char_saturation.value,
-                    'saturation'
+                    self.dsuid, self.char_saturation.value, 'saturation'
                 )
             if char == "Hue":
-                if self.device_support['hue']:
+                if self.support['hue']:
                     # TODO: Muss anders funktionieren
                     digitalstrom.patch_device(
-                        self.dsuid,
-                        self.char_hue.value,
+                        self.dsuid, self.char_hue.value, 'hue'
                     )
                 else:
                     self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
                     digitalstrom.patch_device(
-                        self.dsuid,
-                        self.xy[0],
-                        'x'
+                        self.dsuid, self.xy[0], 'x'
                     )
                     digitalstrom.patch_device(
-                        self.dsuid,
-                        self.xy[1],
-                        'y'
+                        self.dsuid, self.xy[1], 'y'
                     )
 
     def set_hue(self, value):
