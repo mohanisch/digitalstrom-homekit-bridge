@@ -73,8 +73,6 @@ class Light(Accessory):
             else:
                 self.brightness = 100
 
-        self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
-
         # TODO: Muss anders funktionieren
         digitalstrom.patch_device(
             self.dsuid,
@@ -96,6 +94,7 @@ class Light(Accessory):
                         self.char_hue.value,
                     )
                 else:
+                    self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
                     digitalstrom.patch_device(
                         self.dsuid,
                         self.xy[0],
@@ -106,6 +105,7 @@ class Light(Accessory):
                         self.xy[1],
                         'y'
                     )
+
     def set_hue(self, value):
         # Lets only write the new RGB values if the power is on
         # otherwise update the hue value only
