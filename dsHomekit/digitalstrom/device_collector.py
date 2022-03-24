@@ -1,7 +1,7 @@
 import time
 
 from .request_handler import DsRequest
-from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API, HUE_CERTIFIED
+from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API, HUE_CERTIFIED, HUE_DEVICES
 from ..config import args
 
 session = DsRequest("https://" + args.hostname + ":" + args.http_port + "/")
@@ -50,9 +50,13 @@ class DssCollector(object):
                 )
                 if 'brightness' in functions:
                     device_support['brightness'] = True if functions['brightness']['mode'] == 'gradual' else False
+
+                device_support['colortemp'] = True if 'colortemp' in functions else False
+
                 if 'hue' in functions:
                     device_support['color'] = True
-                    device_support['hue'] = True
+                    if function_attributes['technicalName'] in HUE_DEVICES:
+                        device_support['hue'] = True
                 else:
                     device_support['color'] = False
 

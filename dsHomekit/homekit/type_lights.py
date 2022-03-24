@@ -12,8 +12,11 @@ from dsHomekit.utils.helper import threaded
 from dsHomekit.const import (
     STATE_ON,
     CHAR_ON,
-    CHAR_BRIGHTNESS, ATTR_HS_COLOR, ATTR_COLOR_TEMP, COLOR_MODE_WHITE, ATTR_BRIGHTNESS, ATTR_COLOR_MODE, CHAR_HUE,
-    CHAR_SATURATION
+    CHAR_BRIGHTNESS,
+    CHAR_HUE,
+    CHAR_SATURATION,
+    CHAR_COLOR_TEMPERATURE,
+    ATTR_BRIGHTNESS
 )
 
 
@@ -38,12 +41,15 @@ class Light(Accessory):
         self.states = None
 
         self.brightness_supported = self.support['brightness']
+        self.colortemp_supported = self.support['colortemp']
         self.color_supported = self.support['color']
 
         self.states = collector.get_device_state(self.dsuid)
 
         if self.brightness_supported:
             self.chars.append(CHAR_BRIGHTNESS)
+        if self.colortemp_supported:
+            self.chars.append(CHAR_COLOR_TEMPERATURE)
         if self.color_supported:
             self.chars.extend([CHAR_HUE, CHAR_SATURATION])
 
@@ -52,6 +58,9 @@ class Light(Accessory):
 
         if self.brightness_supported:
             self.char_brightness = serv_light.configure_char(CHAR_BRIGHTNESS, value=100)
+
+        if self.colortemp_supported:
+            self.char_colortemp = serv_light.configure_char(CHAR_COLOR_TEMPERATURE, value=100)
 
         if self.color_supported:
             self.char_hue = serv_light.configure_char(CHAR_HUE, value=0)
@@ -78,12 +87,17 @@ class Light(Accessory):
 
         # TODO: Muss anders funktionieren
         for char, value in char_values.items():
+            if char == "ColorTemperature":
+                _attributes.update({'colortemp': self.char_colortemp.value})
             if char == "Saturation":
                 _attributes.update({'saturation': self.char_saturation.value})
             if char == "Hue":
-                self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
-                _attributes.update({'x': self.xy[0]})
-                _attributes.update({'y': self.xy[1]})
+                if self.support['hue']:
+                    _attributes.update({'hue': self.char_hue.value})
+                else:
+                    self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
+                    _attributes.update({'x': self.xy[0]})
+                    _attributes.update({'y': self.xy[1]})
 
         digitalstrom.patch_device(
             self.dsuid, _attributes

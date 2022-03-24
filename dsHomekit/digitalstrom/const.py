@@ -1,3 +1,17 @@
+DS_DEVICES = {
+    "GE-KL200": {},
+    "GE-KM200": {},
+    "GE-SDM200": {},
+    "GE-SDS200-CW": {},
+    "GE-TKM210": {},
+    "GE-TKM230": {},
+    "GR-KL200": {},
+}
+
+HUE_DEVICES = [
+    "Extended color light: LCA001"
+]
+
 DEVICES_CHARS = {
     "light": {
         "switched": 'On',
