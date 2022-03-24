@@ -72,32 +72,33 @@ class DsWebsocket(object):
         ws.run_forever()
 
 
-def patch_device(dsuid: str, value: int, output_id: str = "brightness"):
-    payload_raw = []
+def patch_device(dsuid: str, attributes: dict):
+    device_attributes = []
+    for output_id, value in attributes.items():
+        device_attribute = {
+            "op": "replace",
+            "path": "/functionBlocks/" + dsuid + "/outputs/" + output_id + "/value",
+            "value": str(value)
+        }
+        device_attributes.append(device_attribute)
 
-    device_attributes = {
-        "op": "replace",
-        "path": "/functionBlocks/" + dsuid + "/outputs/" + output_id + "/value",
-        "value": str(value)
-    }
+    # device_scenario = {
+    #     "context": "applicationDevice",
+    #     "actionId": "on" if value == 100 else "off",
+    #     "application": "",
+    #     "area": "",
+    #     "zone": "",
+    #     "dsDevice": dsuid
+    # }
 
-    device_scenario = {
-        "context": "applicationDevice",
-        "actionId": "on" if value == 100 else "off",
-        "application": "",
-        "area": "",
-        "zone": "",
-        "dsDevice": dsuid
-    }
+    # if output_id == 'brightness' and (value == 100 or value == 0):
+    #     payload_raw.append(device_scenario)
+    #     payload = json.dumps(device_scenario).encode("UTF-8")
+    #     s.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
+    # else:
 
-    if output_id == 'brightness' and (value == 100 or value == 0):
-        payload_raw.append(device_scenario)
-        payload = json.dumps(device_scenario).encode("UTF-8")
-        s.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
-    else:
-        payload_raw.append(device_attributes)
-        payload = json.dumps(payload_raw).encode("UTF-8")
-        s.patch(SMART_HOME_API + '/dsDevices/' + dsuid + '/status', data=payload)
+    payload = json.dumps(device_attributes).encode("UTF-8")
+    s.patch(SMART_HOME_API + '/dsDevices/' + dsuid + '/status', data=payload)
 
 
 def patch_switch(user_defined_state_id: str, state: bool):

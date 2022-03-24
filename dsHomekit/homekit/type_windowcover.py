@@ -85,12 +85,11 @@ class WindowsCovering(Accessory):
         """Move cover to value if call came from HomeKit."""
         logging.info("%s: Set position to %d", self.dsuid, value)
 
+        _attributes = {}
+        _attributes.update({'shadePositionOutside': self.char_target_position.value})
+
         # TODO: Muss anders gehen
-        digitalstrom.patch_device(
-            self.dsuid,
-            self.char_target_position.value,
-            'shadePositionOutside'
-        )
+        digitalstrom.patch_device(self.dsuid, _attributes)
         self.char_target_position.set_value(value)
 
     @Accessory.run_at_interval(3)
