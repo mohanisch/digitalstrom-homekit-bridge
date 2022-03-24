@@ -55,8 +55,8 @@ class DssCollector(object):
 
                 if 'hue' in functions:
                     device_support['color'] = True
-                    if function_attributes['technicalName'] in HUE_DEVICES:
-                        device_support['hue'] = True
+                    device_support['hue'] = True if function_attributes['technicalName'] in HUE_DEVICES else False
+
                 else:
                     device_support['color'] = False
 
