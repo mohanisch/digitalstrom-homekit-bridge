@@ -15,7 +15,6 @@ from . import type_lights, type_windowcover, type_sensors, type_switch
 from .util import async_show_setup_message
 from ..core import Event
 
-
 STATUS_READY = 0
 STATUS_RUNNING = 1
 STATUS_STOPPED = 2
@@ -85,6 +84,9 @@ class HomeKit:
     def stop(self):
         self.driver.stop()
 
+    def signal_handler(self, _signal, _frame):
+        self.driver.signal_handler(_signal, _frame)
+
     def set_allocations(self):
         return self.aid_storage.allocations
 
@@ -114,7 +116,6 @@ def async_track_state_change_event(
         print(entity_id, action)
 
     return entity_id
-
 
 
 homekit = HomeKit(

@@ -2,9 +2,7 @@ import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-from dsHomekit import dswebsocket, digitalstrom
-from dsHomekit.homekit import homekit
-
+from dsHomekit import dswebsocket
 from .const import REQUIRED_PYTHON_VER
 
 
@@ -38,11 +36,6 @@ def run_io_tasks_in_parallel(tasks):
 
 def main():
     validate_python()
-
-    dsdevices = digitalstrom.collector.get_devices()
-
-    for dsdevice in dsdevices:
-        homekit.add_bridge_accessory(dsdevice)
 
     dswebsocket.start()
     check_threads()

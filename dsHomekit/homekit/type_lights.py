@@ -111,10 +111,6 @@ class Light(Accessory):
         else:
             self.hue = value
 
-    # def set_brightness(self, value):
-    #     self.char_brightness.set_value(value)
-    #     # self.brightness = value
-
     def set_saturation(self, value):
         self.saturation = value
         self.set_hue(self.hue)

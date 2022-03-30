@@ -1,21 +1,17 @@
 import time
-
-from .request_handler import DsRequest
-from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API, HUE_CERTIFIED, HUE_DEVICES
-from ..config import args
-
-session = DsRequest("https://" + args.hostname + ":" + args.http_port + "/")
+from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API, HUE_DEVICES
 
 
 class DssCollector(object):
     """ Class to structure dS device and hold information of devices and it states """
 
     def __init__(self):
-        self._devices = session.get(SMART_HOME_API + "/dsDevices")['data']
-        self._function_blocks = session.get(SMART_HOME_API + "/functionBlocks")['data']
-        self._zones = session.get(SMART_HOME_API + "/zones")['data']['zones']
-        self._submodules = session.get(SMART_HOME_API + "/submodules")['data']
-        self._user_defined_states = session.get(SMART_HOME_API + "/userDefinedStates")['data']['userDefinedStates']
+        from dsHomekit.digitalstrom import dsrequest
+        self._devices = dsrequest.get(SMART_HOME_API + "/dsDevices")['data']
+        self._function_blocks = dsrequest.get(SMART_HOME_API + "/functionBlocks")['data']
+        self._zones = dsrequest.get(SMART_HOME_API + "/zones")['data']['zones']
+        self._submodules = dsrequest.get(SMART_HOME_API + "/submodules")['data']
+        self._user_defined_states = dsrequest.get(SMART_HOME_API + "/userDefinedStates")['data']['userDefinedStates']
 
         self._device_states = {}
 
@@ -136,14 +132,15 @@ class DssCollector(object):
         return _user_defined_states
 
     def gather_devices_status(self):
-        devices_status_attributes = session.get(SMART_HOME_API + "/dsDevices/status")['data']
-        zones_status = session.get(SMART_HOME_API + "/zones/status")['data']
+        from dsHomekit.digitalstrom import dsrequest
+        devices_status_attributes = dsrequest.get(SMART_HOME_API + "/dsDevices/status")['data']
+        zones_status = dsrequest.get(SMART_HOME_API + "/zones/status")['data']
 
         params = {
             "query": "/usr/addon-states/system-addon-user-defined-states/*(*)",
-            "token": session.get_token()
+            "token": dsrequest.get_token()
         }
-        user_defined_states = session.get(PROPERTY_API + "/query", params=params)['result']
+        user_defined_states = dsrequest.get(PROPERTY_API + "/query", params=params)['result']
 
         last_change = int(time.time())
 

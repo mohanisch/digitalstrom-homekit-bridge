@@ -1,6 +1,7 @@
 import threading
 import tempfile
 import errno
+import unicodedata
 
 def threaded(fn):
     def wrapper(*args, **kwargs):
@@ -9,6 +10,10 @@ def threaded(fn):
         return thread
 
     return wrapper
+
+
+def remove_control_characters(s):
+    return "".join(ch for ch in s if unicodedata.category(ch)[0]!="C")
 
 
 def isWritable(path):

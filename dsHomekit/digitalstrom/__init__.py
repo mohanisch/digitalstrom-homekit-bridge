@@ -1,75 +1,12 @@
-import logging
-import websocket
-import _thread
 import json
 
-from dsHomekit import config
-from dsHomekit.digitalstrom.device_collector import DssCollector
 from .const import SMART_HOME_API
-
-from .request_handler import DsRequest
 from ..config import args
+from .device_collector import DssCollector
+from .request_handler import DsRequest
 
-s = DsRequest("https://" + args.hostname + ":" + args.http_port + "/")
-
-
+dsrequest = DsRequest("https://" + args.hostname + ":" + args.http_port + "/")
 collector = DssCollector()
-
-import unicodedata
-def remove_control_characters(s):
-    return "".join(ch for ch in s if unicodedata.category(ch)[0]!="C")
-
-
-class DsWebsocket(object):
-    def __init__(self):
-        self.wshost = "ws://{0}:{1}/api/v1/apartment/notifications".format(
-            config.args.hostname, config.args.ws_port)
-
-    @staticmethod
-    def on_message(ws, message):
-        _devices_updates = []
-        _changed_devices = []
-
-        _message = json.loads(remove_control_characters(message))
-
-        if "arguments" in _message:
-            if _message['arguments'][0]['type'] == 'apartmentStatusChanged':
-                logging.debug("Apartment status changed")
-                collector.gather_devices_status()
-
-            if _message['arguments'][0]['type'] == 'apartmentStructureChanged':
-                logging.debug("Apartment structure changed")
-
-    def on_error(self, ws, error):
-        logging.error(error)
-
-    def on_close(self, ws, close_status_code, close_msg):
-        logging.info("Close websocket: " + str(close_status_code))
-
-    def on_open(self, ws):
-        def run():
-            obj = {
-                "protocol": "json",
-                "version": 1
-            }
-            ws.send(json.dumps(obj))
-
-            from dsHomekit import homekit
-            homekit.start()
-
-        logging.info("Start websocket client")
-        _thread.start_new_thread(run, ())
-
-    def start(self):
-        websocket.enableTrace(False)
-        ws = websocket.WebSocketApp(
-            self.wshost,
-            on_open=self.on_open,
-            on_message=self.on_message,
-            on_error=self.on_error,
-            on_close=self.on_close
-        )
-        ws.run_forever()
 
 
 def patch_device(dsuid: str, attributes: dict):
@@ -98,7 +35,7 @@ def patch_device(dsuid: str, attributes: dict):
     # else:
 
     payload = json.dumps(device_attributes).encode("UTF-8")
-    s.patch(SMART_HOME_API + '/dsDevices/' + dsuid + '/status', data=payload)
+    dsrequest.patch(SMART_HOME_API + '/dsDevices/' + dsuid + '/status', data=payload)
 
 
 def patch_switch(user_defined_state_id: str, state: bool):
@@ -110,4 +47,4 @@ def patch_switch(user_defined_state_id: str, state: bool):
     }
     payload_raw = [switch_attributes]
     payload = json.dumps(payload_raw).encode("UTF-8")
-    s.patch('userDefinedStates/' + user_defined_state_id + '/status', payload=payload)
+    dsrequest.patch('userDefinedStates/' + user_defined_state_id + '/status', payload=payload)
