@@ -95,9 +95,10 @@ class Light(Accessory):
                 if self.support['hue']:
                     _attributes.update({'hue': self.char_hue.value})
                 else:
-                    self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
-                    _attributes.update({'x': self.xy[0]})
-                    _attributes.update({'y': self.xy[1]})
+                    if self.brightness > 0:
+                        self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
+                        _attributes.update({'x': self.xy[0]})
+                        _attributes.update({'y': self.xy[1]})
 
         digitalstrom.patch_device(
             self.dsuid, _attributes
