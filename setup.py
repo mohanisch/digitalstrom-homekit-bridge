@@ -30,6 +30,7 @@ setup(
                       "urllib3",
                       "requests",
                       "HAP-python[QRCode]",
-                      "rgbxy"],
+                      "rgbxy",
+                      "PyYAML"],
     zip_safe=False
 )
