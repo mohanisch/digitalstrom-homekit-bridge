@@ -31,9 +31,11 @@ def get_arguments() -> argparse.Namespace:
     )
     required_named = parser.add_argument_group('required named arguments')
     required_named.add_argument(
-        "--token", help="Token created on dss", default="dss.local", required=True
+        "--token", help="Token created on dss", default="xxx", required=True
     )
-
+    required_named.add_argument(
+        "--config-path", help="Path to config.yml", default="", required=True
+    )
     arguments = parser.parse_args()
 
     return arguments

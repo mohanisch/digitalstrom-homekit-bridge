@@ -3,8 +3,9 @@ from typing import Any
 
 import yaml
 from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API, HUE_DEVICES
+from ..config import args
 
-with open("config.yml", "r") as stream:
+with open(args.config_path + "/config.yml", "r") as stream:
     try:
         dsconfig_file = yaml.safe_load(stream)
     except yaml.YAMLError as exc:
