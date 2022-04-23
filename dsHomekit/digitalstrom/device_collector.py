@@ -17,7 +17,7 @@ def collect_data(uri, data_filter: str = ""):
     _response = dsrequest.get(SMART_HOME_API + uri)['data']
 
     _data = Any
-    if data_filter == "devices" and "devices" in dsconfig_file:
+    if data_filter == "devices" and dsconfig_file is not None and "devices" in dsconfig_file:
         if "include" in dsconfig_file["devices"]:
             _data = [x for x in _response if x['id'] in dsconfig_file["devices"]["include"]]
             return _data
@@ -224,14 +224,15 @@ class DssCollector(object):
         for zone in zones_data['zones']:  # self._zones:
 
             _applications = {}
-            if zone['id'] == '28313':
+            if zone['id'] != '65534':
                 for application in zone['attributes']['applications']:
                     _applications[application] = []
 
                 for submodule in zone["attributes"]["submodules"]:
                     function_attributes = ({v['id']: v['attributes'] for v in self._function_blocks}).get(submodule)
                     if "outputs" in function_attributes:
-                        submodule_applications = ({v['id']: v['attributes']['application'] for v in self._submodules}).get(submodule)
+                        submodule_applications = (
+                        {v['id']: v['attributes']['application'] for v in self._submodules}).get(submodule)
                         _applications[submodule_applications].append(submodule)
 
             if "name" in zone["attributes"] and zone["id"] != 65534:
