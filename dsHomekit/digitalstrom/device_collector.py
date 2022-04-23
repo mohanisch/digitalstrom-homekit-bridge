@@ -1,5 +1,27 @@
 import time
+from typing import Any
+
+import yaml
 from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API, HUE_DEVICES
+
+with open("config.yml", "r") as stream:
+    try:
+        dsconfig_file = yaml.safe_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
+
+
+def collect_data(uri, data_filter: str = ""):
+    from dsHomekit.digitalstrom import dsrequest
+    _response = dsrequest.get(SMART_HOME_API + uri)['data']
+
+    _data = Any
+    if data_filter == "devices" and "devices" in dsconfig_file:
+        if "include" in dsconfig_file["devices"]:
+            _data = [x for x in _response if x['id'] in dsconfig_file["devices"]["include"]]
+            return _data
+    else:
+        return _response
 
 
 class DssCollector(object):
@@ -7,14 +29,13 @@ class DssCollector(object):
 
     def __init__(self):
         from dsHomekit.digitalstrom import dsrequest
-        self._devices = dsrequest.get(SMART_HOME_API + "/dsDevices")['data']
+        self._devices = collect_data("/dsDevices", "devices")
         self._function_blocks = dsrequest.get(SMART_HOME_API + "/functionBlocks")['data']
-        self._zones = dsrequest.get(SMART_HOME_API + "/zones")['data']['zones']
+        self._zones = {}
         self._submodules = dsrequest.get(SMART_HOME_API + "/submodules")['data']
         self._user_defined_states = dsrequest.get(SMART_HOME_API + "/userDefinedStates")['data']['userDefinedStates']
 
         self._device_states = {}
-
         self.collected_zone = {}
 
         self._transform_zones()
@@ -29,6 +50,9 @@ class DssCollector(object):
 
     def get_devices(self):
         return self._transform_output_devices() + self._transform_input_devices() + self._transform_user_defined_states()
+
+    def get_zone(self, zoneid: int):
+        return ({int(v['id']): v for v in self._zones}).get(int(zoneid))
 
     def _transform_output_devices(self):
         _devices = []
@@ -61,8 +85,7 @@ class DssCollector(object):
                         device_chars = DEVICES_CHARS[device_type][chars['attributes']['mode']]
                     device_mode = chars['attributes']['mode']
 
-                zone = ({int(v['id']): v['name'] for v in self._transform_zones()}).get(
-                    int(device['attributes']['zone']))
+                zone = self.get_zone(device['attributes']['zone'])['name']
                 d = {
                     "entity_id": device['id'] + "." + device_type,
                     "dsuid": device['id'],
@@ -94,8 +117,7 @@ class DssCollector(object):
                         device_chars.append(chars['attributes']['type'].capitalize())
                         device_type = chars['attributes']['type']
 
-                        zone = ({int(v['id']): v['name'] for v in self._transform_zones()}).get(
-                            int(device['attributes']['zone']))
+                        zone = self.get_zone(device['attributes']['zone'])['name']
                         if device_type:
                             s = {
                                 "entity_id": device['id'] + "." + device_type,
@@ -196,15 +218,29 @@ class DssCollector(object):
 
     def _transform_zones(self):
         zones = []
+        zones_data = collect_data("/zones")
 
-        for zone in self._zones:
-            if "name" in zone["attributes"]:
+        for zone in zones_data['zones']:  # self._zones:
+
+            _applications = {}
+            if zone['id'] == '28313':
+                for application in zone['attributes']['applications']:
+                    _applications[application] = []
+
+                for submodule in zone["attributes"]["submodules"]:
+                    function_attributes = ({v['id']: v['attributes'] for v in self._function_blocks}).get(submodule)
+                    if "outputs" in function_attributes:
+                        submodule_applications = ({v['id']: v['attributes']['application'] for v in self._submodules}).get(submodule)
+                        _applications[submodule_applications].append(submodule)
+
+            if "name" in zone["attributes"] and zone["id"] != 65534:
                 cleaned = {
                     "id": zone["id"],
-                    "name": zone["attributes"]["name"]
+                    "name": zone["attributes"]["name"],
+                    "devices": _applications
                 }
                 zones.append(cleaned)
-        return zones
+        self._zones = zones
 
 # #if __name__ == '__main__':
 # devices = DssCollector()

@@ -30,6 +30,7 @@ class Light(Accessory):
         self.chars = device['chars']
         self.dsuid = device['dsuid']
         self.support = device['support']
+        self.zoneid = device['zoneid']
         self.accessory_state = 0
         self.brightness = 100
         self.saturation = None
@@ -83,14 +84,8 @@ class Light(Accessory):
                 self.brightness = 100
 
         _attributes = {}
-        _attributes.update({'brightness': self.brightness})
 
-        # TODO: Muss anders funktionieren
         for char, value in char_values.items():
-            if char == "ColorTemperature":
-                _attributes.update({'colortemp': self.char_colortemp.value})
-            if char == "Saturation":
-                _attributes.update({'saturation': self.char_saturation.value})
             if char == "Hue":
                 if self.support['hue']:
                     _attributes.update({'hue': self.char_hue.value})
@@ -99,10 +94,19 @@ class Light(Accessory):
                         self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
                         _attributes.update({'x': self.xy[0]})
                         _attributes.update({'y': self.xy[1]})
+            if char == "ColorTemperature":
+                _attributes.update({'colortemp': self.char_colortemp.value})
+            if char == "Saturation":
+                _attributes.update({'saturation': self.char_saturation.value})
 
-        digitalstrom.patch_device(
-            self.dsuid, _attributes
-        )
+        _attributes.update({'brightness': self.brightness})
+
+
+        # digitalstrom.patch_device(
+        #     self.dsuid, _attributes
+        # )
+        digitalstrom.event_decider.recieve_device_event(self.dsuid, self.zoneid, _attributes, 'lights')
+
 
     def set_hue(self, value):
         # Lets only write the new RGB values if the power is on

@@ -9,7 +9,7 @@ from pyhap.accessory_driver import AccessoryDriver
 from pyhap.util import callback
 
 from dsHomekit import config
-from .accessories import get_accessory
+from .accessories import get_accessory, HomeDriver
 from .aid_manager import AccessoryAidStorage
 from . import type_lights, type_windowcover, type_sensors, type_switch
 from .util import async_show_setup_message
@@ -48,7 +48,7 @@ class HomeKit:
     def setup(self):
         """Set up bridge and accessory driver."""
         logging.info("Setup HomeKit driver")
-        self.driver = AccessoryDriver(
+        self.driver = HomeDriver(
             port=self._port,
             persist_file=self.persist_file
         )
@@ -103,6 +103,7 @@ def get_dsuid_by_aid(aid: int):
     """Returns dsuid by given aid"""
     dsuid = None
     allocations = homekit.aid_storage.allocations
+
     if aid in allocations.values():
         dsuid = list(allocations.keys())[list(allocations.values()).index(aid)]
     return dsuid
