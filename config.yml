@@ -1,5 +1,6 @@
-lights: true
-cover: true
+lights: True
+cover: True
+absent: True
 
 devices:
   include:

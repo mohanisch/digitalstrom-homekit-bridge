@@ -26,7 +26,12 @@ class EventDecider(object):
                 _events[dsuid] = {}
                 self.hap_events = list(dict.fromkeys(_events))
 
-    def recieve_device_event(self, dsuid: str, zoneid: int, attributes: dict, application: str = ""):
+    def device_event(
+            self, dsuid: str,
+            zoneid: int,
+            attributes: dict,
+            application: str = ""
+    ):
         _count_hap_events = len(self.hap_events)
         _count_device_events = 0
 
@@ -38,37 +43,38 @@ class EventDecider(object):
             _count_device_events = len(self.device_events)
 
         if _count_device_events == _count_hap_events:
+            _state = None
+            _actionid = None
+
             zone_devices = collector.get_zone(zoneid)['devices']
             result = all(elem in list(self.device_events.keys()) for elem in zone_devices[application])
+
+            def zone_state(attribute):
+                self.varname = attribute
+                _v = []
+                for e, a in self.device_events.items():
+                    _v.append(a['attributes'][self.varname])
+                _v.sort()
+                return True if _v[0] == 100 and all(x in (0, 100) for x in _v) else False
+
+            if application == 'lights':
+                _state = zone_state('brightness')
+                _actionid = "on" if _state else "off"
+            if application == 'shades':
+                _state = zone_state('shadePositionOutside')
+                _actionid = "up" if _state else "down"
+
             if result:
-                _state = None
-
-                def zone_state(attribute):
-                    self.varname = attribute
-                    _v = []
-                    for e, a in self.device_events.items():
-                        _v.append(a['attributes'][self.varname])
-                    _v.sort()
-                    return True if _v[0] == 100 and all(x in (0, 100) for x in _v) else False
-
-                if application == 'lights':
-                    _state = zone_state('brightness')
-                if application == 'shades':
-                    _state = zone_state('shadePositionOutside')
-
-                patch_zone(zoneid, _state, application)
+                patch_zone(zoneid, application, _actionid)
             else:
                 for dsuid, values in self.device_events.items():
                     patch_device(
-                        dsuid, values['attributes']
+                        dsuid, values['attributes'], _actionid
                     )
-            event_decider.clean_events()
-
-    def get_events(self):
-        return self.hap_events
+            self.clean_events()
 
     def clean_events(self):
-        self.hap_events = []
+        self.hap_events = None
         self.device_events = {}
 
 
@@ -76,10 +82,10 @@ event_decider = EventDecider()
 
 
 @threaded
-def patch_zone(zoneid: int, state: bool, application: str):
+def patch_zone(zoneid: int, application: str, actionid: str):
     zone_scenario = {
         "context": "applicationZone",
-        "actionId": "on" if state else "off",
+        "actionId": actionid,
         "application": application,
         "zone": zoneid
     }
@@ -88,7 +94,7 @@ def patch_zone(zoneid: int, state: bool, application: str):
 
 
 @threaded
-def patch_device(dsuid: str, attributes: dict):
+def patch_device(dsuid: str, attributes: dict, actionid: str):
     if (
             (
                     'brightness' in attributes and attributes['brightness'] in (100, 0)
@@ -100,18 +106,10 @@ def patch_device(dsuid: str, attributes: dict):
                     and attributes['shadePositionOutside'] in (100, 0)
             )
     ):
-        actionId = ""
-        if 'brightness' in attributes:
-            actionId = "on" if attributes['brightness'] == 100 else "off"
-        if 'shadePositionOutside' in attributes:
-            actionId = "on" if attributes['shadePositionOutside'] == 100 else "off"
 
         device_scenario = {
             "context": "applicationDevice",
-            "actionId": actionId,
-            "application": "",
-            "area": "",
-            "zone": "",
+            "actionId": actionid,
             "dsDevice": dsuid
         }
         payload = json.dumps(device_scenario).encode("UTF-8")
@@ -131,13 +129,18 @@ def patch_device(dsuid: str, attributes: dict):
         dsrequest.patch(SMART_HOME_API + '/dsDevices/' + dsuid + '/status', data=payload)
 
 
-def patch_switch(user_defined_state_id: str, state: bool):
-    print(user_defined_state_id, state)
-    switch_attributes = {
+def patch_switch(switch_id: str, state: bool):
+    switch_attributes = []
+    switch_attribute = {
         "op": "replace",
         "path": "/status",
         "value": "active" if state else "inactive"
     }
-    payload_raw = [switch_attributes]
-    payload = json.dumps(payload_raw).encode("UTF-8")
-    dsrequest.patch('userDefinedStates/' + user_defined_state_id + '/status', payload=payload)
+    switch_attributes.append(switch_attribute)
+
+    payload = json.dumps(switch_attributes).encode("UTF-8")
+    if switch_id in ('apartmentAbsents', 'dummy'):
+        dsrequest.patch(SMART_HOME_API + '/status', data=payload)
+
+    else:
+        dsrequest.patch(SMART_HOME_API + '/userDefinedStates/' + switch_id + '/status', data=payload)

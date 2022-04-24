@@ -89,10 +89,12 @@ class WindowsCovering(Accessory):
         _attributes = {}
         _attributes.update({'shadePositionOutside': self.char_target_position.value})
 
-        # TODO: Muss anders gehen
-        #digitalstrom.patch_device(self.dsuid, _attributes)
-        digitalstrom.event_decider.recieve_device_event(self.dsuid, self.zoneid, _attributes, "shades")
-
+        digitalstrom.event_decider.device_event(
+            self.dsuid,
+            self.zoneid,
+            _attributes,
+            "shades"
+        )
         self.char_target_position.set_value(value)
 
     @Accessory.run_at_interval(3)

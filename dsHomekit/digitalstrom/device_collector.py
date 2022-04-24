@@ -16,8 +16,8 @@ def collect_data(uri, data_filter: str = ""):
     from dsHomekit.digitalstrom import dsrequest
     _response = dsrequest.get(SMART_HOME_API + uri)['data']
 
-    _data = Any
     if data_filter == "devices" and dsconfig_file is not None and "devices" in dsconfig_file:
+        _data = Any
         if "include" in dsconfig_file["devices"]:
             _data = [x for x in _response if x['id'] in dsconfig_file["devices"]["include"]]
             return _data
@@ -32,9 +32,10 @@ class DssCollector(object):
         from dsHomekit.digitalstrom import dsrequest
         self._devices = collect_data("/dsDevices", "devices")
         self._function_blocks = dsrequest.get(SMART_HOME_API + "/functionBlocks")['data']
+        self._user_defined_states = collect_data("/userDefinedStates")
         self._zones = {}
+        self._apartment = {}
         self._submodules = dsrequest.get(SMART_HOME_API + "/submodules")['data']
-        self._user_defined_states = dsrequest.get(SMART_HOME_API + "/userDefinedStates")['data']['userDefinedStates']
 
         self._device_states = {}
         self.collected_zone = {}
@@ -44,16 +45,6 @@ class DssCollector(object):
         self._transform_input_devices()
 
         self.gather_devices_status()
-
-    def get_device_state(self, dsuid: str):
-        _device_state = self._device_states[dsuid]
-        return _device_state
-
-    def get_devices(self):
-        return self._transform_output_devices() + self._transform_input_devices() + self._transform_user_defined_states()
-
-    def get_zone(self, zoneid: int):
-        return ({int(v['id']): v for v in self._zones}).get(int(zoneid))
 
     def _transform_output_devices(self):
         _devices = []
@@ -139,7 +130,7 @@ class DssCollector(object):
     def _transform_user_defined_states(self):
         _user_defined_states = []
 
-        for user_defined_state in self._user_defined_states:
+        for user_defined_state in self._user_defined_states['userDefinedStates']:
             if user_defined_state['type'] == 'manualState' and user_defined_state['attributes']['visibleForUsers']:
                 device_type = 'button'
 
@@ -154,6 +145,53 @@ class DssCollector(object):
                 _user_defined_states.append(d)
         return _user_defined_states
 
+    def _transform_apartment(self):
+        _apartment_states = []
+
+        if 'absent' in dsconfig_file and dsconfig_file['absent']:
+            device_type = 'button'
+            d = {
+                "entity_id": "apartmentAbsents.switch",
+                "dsuid": "apartmentAbsents",
+                "name": "apartmentAbsents",
+                "service": device_type,
+                "chars": None,
+                "support": None,
+            }
+            _apartment_states.append(d)
+
+        return _apartment_states
+
+
+
+
+    def _transform_zones(self):
+        zones = []
+        zones_data = collect_data("/zones")
+
+        for zone in zones_data['zones']:  # self._zones:
+
+            _applications = {}
+            if zone['id'] != '65534':
+                for application in zone['attributes']['applications']:
+                    _applications[application] = []
+
+                for submodule in zone["attributes"]["submodules"]:
+                    function_attributes = ({v['id']: v['attributes'] for v in self._function_blocks}).get(submodule)
+                    if "outputs" in function_attributes:
+                        submodule_applications = (
+                        {v['id']: v['attributes']['application'] for v in self._submodules}).get(submodule)
+                        _applications[submodule_applications].append(submodule)
+
+            if "name" in zone["attributes"] and zone["id"] != 65534:
+                cleaned = {
+                    "id": zone["id"],
+                    "name": zone["attributes"]["name"],
+                    "devices": _applications
+                }
+                zones.append(cleaned)
+        self._zones = zones
+
     def gather_devices_status(self):
         from dsHomekit.digitalstrom import dsrequest
         devices_status_attributes = dsrequest.get(SMART_HOME_API + "/dsDevices/status")['data']
@@ -166,6 +204,16 @@ class DssCollector(object):
         user_defined_states = dsrequest.get(PROPERTY_API + "/query", params=params)['result']
 
         last_change = int(time.time())
+
+        if 'absent' in dsconfig_file and dsconfig_file['absent']:
+            apartment_status = collect_data('/status')
+            _apartment_states = {}
+            _absent_state = apartment_status['attributes']['access']['absent']
+            _apartment_states['apartmentAbsents'] = {
+                "state": "on" if _absent_state else "off",
+                "last_change": last_change
+            }
+            self._device_states.update(_apartment_states)
 
         for device in devices_status_attributes:
             if "outputs" in device['attributes']['functionBlocks'][0]:
@@ -217,41 +265,15 @@ class DssCollector(object):
 
         return self._device_states
 
-    def _transform_zones(self):
-        zones = []
-        zones_data = collect_data("/zones")
+    def get_device_state(self, dsuid: str):
+        _device_state = self._device_states[dsuid]
+        return _device_state
 
-        for zone in zones_data['zones']:  # self._zones:
+    def get_devices(self):
+        return self._transform_output_devices() + \
+               self._transform_input_devices() + \
+               self._transform_user_defined_states() + \
+               self._transform_apartment()
 
-            _applications = {}
-            if zone['id'] != '65534':
-                for application in zone['attributes']['applications']:
-                    _applications[application] = []
-
-                for submodule in zone["attributes"]["submodules"]:
-                    function_attributes = ({v['id']: v['attributes'] for v in self._function_blocks}).get(submodule)
-                    if "outputs" in function_attributes:
-                        submodule_applications = (
-                        {v['id']: v['attributes']['application'] for v in self._submodules}).get(submodule)
-                        _applications[submodule_applications].append(submodule)
-
-            if "name" in zone["attributes"] and zone["id"] != 65534:
-                cleaned = {
-                    "id": zone["id"],
-                    "name": zone["attributes"]["name"],
-                    "devices": _applications
-                }
-                zones.append(cleaned)
-        self._zones = zones
-
-# #if __name__ == '__main__':
-# devices = DssCollector()
-# import json
-#
-# bla = devices.gather_devices_status()
-# #print(bla)
-# print(json.dumps(bla,
-#                  sort_keys=True,
-#                  indent=4,
-#                  separators=(',', ': ')
-#                  ))
+    def get_zone(self, zoneid: int):
+        return ({int(v['id']): v for v in self._zones}).get(int(zoneid))

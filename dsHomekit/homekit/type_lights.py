@@ -70,7 +70,6 @@ class Light(Accessory):
         serv_light.setter_callback = self._set_chars
         self.async_update_state(self.states)
 
-
     @threaded
     def _set_chars(self, char_values):
         logging.debug("Light _set_chars: %s", char_values)
@@ -101,12 +100,12 @@ class Light(Accessory):
 
         _attributes.update({'brightness': self.brightness})
 
-
-        # digitalstrom.patch_device(
-        #     self.dsuid, _attributes
-        # )
-        digitalstrom.event_decider.recieve_device_event(self.dsuid, self.zoneid, _attributes, 'lights')
-
+        digitalstrom.event_decider.device_event(
+            self.dsuid,
+            self.zoneid,
+            _attributes,
+            "lights"
+        )
 
     def set_hue(self, value):
         # Lets only write the new RGB values if the power is on
@@ -166,7 +165,6 @@ class Light(Accessory):
         xy = converter.rgb_to_xy(rgb[0], rgb[1], rgb[2])
         return xy[0], xy[1]
 
-
     @Accessory.run_at_interval(3)
     async def run(self):
         """Handle accessory driver started event."""
@@ -174,7 +172,7 @@ class Light(Accessory):
         current_time = int(time.time())
 
         for char, values in device_services['states'].items():
-            if char == ATTR_BRIGHTNESS and current_time-3 < device_services['last_change']:
+            if char == ATTR_BRIGHTNESS and current_time - 3 < device_services['last_change']:
                 _value = round(values['value'])
                 if self.accessory_state != bool(_value):
                     self.accessory_state = bool(_value)
