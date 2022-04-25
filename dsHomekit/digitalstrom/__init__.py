@@ -131,16 +131,20 @@ def patch_device(dsuid: str, attributes: dict, actionid: str):
 
 def patch_switch(switch_id: str, state: bool):
     switch_attributes = []
-    switch_attribute = {
-        "op": "replace",
-        "path": "/status",
-        "value": "active" if state else "inactive"
-    }
-    switch_attributes.append(switch_attribute)
-
-    payload = json.dumps(switch_attributes).encode("UTF-8")
     if switch_id in ('apartmentAbsents', 'dummy'):
-        dsrequest.patch(SMART_HOME_API + '/status', data=payload)
-
+        switch_scenario = {
+            "context": "applicationApartment",
+            "actionId": "absent" if state else "present",
+            "application": "access"
+        }
+        payload = json.dumps(switch_scenario).encode("UTF-8")
+        dsrequest.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
     else:
+        switch_attribute = {
+            "op": "replace",
+            "path": "/status",
+            "value": "active" if state else "inactive"
+        }
+        switch_attributes.append(switch_attribute)
+        payload = json.dumps(switch_attributes).encode("UTF-8")
         dsrequest.patch(SMART_HOME_API + '/userDefinedStates/' + switch_id + '/status', data=payload)
