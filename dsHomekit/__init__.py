@@ -16,7 +16,7 @@ logging.basicConfig(
 
 
 def add_devices():
-    dsdevices = collector.get_devices()
+    dsdevices = collector.get_entities()
 
     for dsdevice in dsdevices:
         homekit.add_bridge_accessory(dsdevice)
