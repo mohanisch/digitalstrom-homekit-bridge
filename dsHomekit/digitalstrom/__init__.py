@@ -49,16 +49,27 @@ class EventDecider(object):
             def zone_state(_application):
                 _v = []
                 STATE_TRUE, STATE_FALSE = "", ""
+                STATE_ON = "on"
+                STATE_OFF = "off"
+                STATE_UP = "up"
+                STATE_DOWN = "down"
+
+                _event_type = "zone" if all(
+                    elem in list(self.device_events.keys()) for elem in zone_devices[application]) else "device"
 
                 # TODO: Muss als constante hinterlegt werden, für jeden möglichen type
                 if value['application'] == 'lights':
-                    STATE_TRUE = "on"
-                    STATE_FALSE = "off"
                     self.varname = "brightness"
+                    STATE_TRUE = STATE_ON
+                    STATE_FALSE = STATE_OFF
                 if value['application'] == 'shades':
-                    STATE_TRUE = "up"
-                    STATE_FALSE = "down"
                     self.varname = "shadePositionOutside"
+                    if _event_type == "device":
+                        STATE_TRUE = STATE_ON
+                        STATE_FALSE = STATE_OFF
+                    else:
+                        STATE_TRUE = STATE_UP
+                        STATE_FALSE = STATE_DOWN
 
                 for e, a in self.device_events.items():
                     if a['application'] == _application:
@@ -66,8 +77,7 @@ class EventDecider(object):
                 _v.sort()
 
                 return \
-                    "zone" if all(
-                        elem in list(self.device_events.keys()) for elem in zone_devices[application]) else "device", \
+                    _event_type, \
                     STATE_TRUE if _v[0] == 100 else STATE_FALSE
 
             for dsuid, value in self.device_events.items():
