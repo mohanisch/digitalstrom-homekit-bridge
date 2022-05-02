@@ -1,6 +1,5 @@
 """Class to hold all cover accessories."""
 import logging
-import time
 from pyhap.accessory import Accessory
 from pyhap.const import (
     CATEGORY_WINDOW_COVERING,
@@ -46,17 +45,17 @@ class WindowsCovering(Accessory):
 
         self.serv_cover = self.add_preload_service('WindowCovering', chars=self.chars)
 
+        if self._supports_stop:
+            self.char_hold_position = self.serv_cover.configure_char(
+                'HoldPosition', setter_callback=self.set_stop
+            )
+
         if self._supports_tilt:
             self.char_target_tilt = self.serv_cover.configure_char(
                 'TargetHorizontalTiltAngle', setter_callback=self.set_tilt
             )
             self.char_current_tilt = self.serv_cover.configure_char(
                 'CurrentHorizontalTiltAngle', value=0
-            )
-
-        if self._supports_stop:
-            self.char_hold_position = self.serv_cover.configure_char(
-                'HoldPosition', setter_callback=self.set_stop
             )
 
         self.char_name = self.serv_cover.configure_char(
@@ -72,19 +71,19 @@ class WindowsCovering(Accessory):
 
     def set_stop(self, value):
         """Stop the cover motion from HomeKit."""
-        logging.info("%s: Set stop at %d", self.entity_id, value)
+        logging.debug("%s: Set stop at %d", self.entity_id, value)
 
         if value != 1:
             return
 
     def set_tilt(self, value):
         """Set tilt to value if call came from HomeKit."""
-        logging.info("%s: Set tilt to %d", self.entity_id, value)
+        logging.debug("%s: Set tilt to %d", self.entity_id, value)
 
     @threaded
     def move_cover(self, value):
         """Move cover to value if call came from HomeKit."""
-        logging.info("%s: Set position to %d", self.dsuid, value)
+        logging.debug("%s: Set position to %d", self.dsuid, value)
 
         _attributes = {}
         _attributes.update({'shadePositionOutside': self.char_target_position.value})

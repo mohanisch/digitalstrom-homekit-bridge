@@ -36,6 +36,8 @@ def get_accessory(driver, device, aid):
             a_type = "HumiditySensor"
         elif 'Brightness' in device['chars']:
             a_type = "LightSensor"
+        elif 'Motion' in device['chars']:
+            a_type = "MotionSensor"
 
     elif device['service'] in (
             "automation",

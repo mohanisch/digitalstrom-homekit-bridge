@@ -1,5 +1,5 @@
 import argparse
-
+import yaml
 from dsHomekit.const import RESTART_EXIT_CODE
 
 
@@ -42,3 +42,9 @@ def get_arguments() -> argparse.Namespace:
 
 
 args = get_arguments()
+
+with open(args.config_path + "/config.yml", "r") as stream:
+    try:
+        file = yaml.safe_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)

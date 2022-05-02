@@ -2,6 +2,7 @@ import threading
 import tempfile
 import errno
 import unicodedata
+import uuid
 
 
 def threaded(fn):
@@ -14,12 +15,12 @@ def threaded(fn):
 
 
 def remove_control_characters(s):
-    return "".join(ch for ch in s if unicodedata.category(ch)[0]!="C")
+    return "".join(ch for ch in s if unicodedata.category(ch)[0] != "C")
 
 
 def isWritable(path):
     try:
-        testfile = tempfile.TemporaryFile(dir = path)
+        testfile = tempfile.TemporaryFile(dir=path)
         testfile.close()
     except OSError as e:
         if e.errno == errno.EACCES:  # 13
@@ -27,3 +28,8 @@ def isWritable(path):
         e.filename = path
         raise
     return True
+
+
+def generate_dsuid(name: str):
+    _uuid = uuid.uuid3(uuid.NAMESPACE_OID, name)
+    return str(_uuid).replace("-", "") + '00'

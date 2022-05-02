@@ -9,8 +9,16 @@ import websocket
 import _thread
 from .utils.helper import remove_control_characters
 
+
+def _loglevel():
+    loglevel = config.args.loglevel.upper()
+    if 'loglevel' in config.file:
+        loglevel = config.file['loglevel'].upper()
+    return loglevel
+
+
 logging.basicConfig(
-    level=getattr(logging, config.args.loglevel.upper()),
+    level=getattr(logging, _loglevel()),
     format='%(asctime)s %(name)s.%(funcName)s : %(levelname)-8s [%(process)d] %(message)s',
 )
 

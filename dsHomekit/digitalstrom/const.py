@@ -28,6 +28,10 @@ SMART_HOME_API = "api/v1/apartment"
 PROPERTY_API = "json/property"
 SYSTEM_API = "json/system"
 
+ENOCEAN_DEVICES = {
+    "Id Rf EnOcean Motion input": ["Motion", "Brightness"]
+}
+
 HUE_CERTIFIED = [
     "LCA001",
     "LCT014",

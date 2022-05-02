@@ -38,39 +38,49 @@ class EventDecider(object):
         if dsuid in self.hap_events and _count_device_events <= _count_hap_events:
             self.device_events[dsuid] = {
                 "zoneid": zoneid,
-                "attributes": attributes
+                "attributes": attributes,
+                "application": application
             }
             _count_device_events = len(self.device_events)
 
         if _count_device_events == _count_hap_events:
-            _state = None
-            _actionid = None
-
             zone_devices = collector.get_zone(zoneid)['devices']
-            result = all(elem in list(self.device_events.keys()) for elem in zone_devices[application])
 
-            def zone_state(attribute):
-                self.varname = attribute
+            def zone_state(_application):
                 _v = []
+                STATE_TRUE, STATE_FALSE = "", ""
+
+                # TODO: Muss als constante hinterlegt werden, für jeden möglichen type
+                if value['application'] == 'lights':
+                    STATE_TRUE = "on"
+                    STATE_FALSE = "off"
+                    self.varname = "brightness"
+                if value['application'] == 'shades':
+                    STATE_TRUE = "up"
+                    STATE_FALSE = "down"
+                    self.varname = "shadePositionOutside"
+
                 for e, a in self.device_events.items():
-                    _v.append(a['attributes'][self.varname])
+                    if a['application'] == _application:
+                        _v.append(a['attributes'][self.varname])
                 _v.sort()
-                return True if _v[0] == 100 and all(x in (0, 100) for x in _v) else False
 
-            if application == 'lights':
-                _state = zone_state('brightness')
-                _actionid = "on" if _state else "off"
-            if application == 'shades':
-                _state = zone_state('shadePositionOutside')
-                _actionid = "up" if _state else "down"
+                return \
+                    "zone" if all(
+                        elem in list(self.device_events.keys()) for elem in zone_devices[application]) else "device", \
+                    STATE_TRUE if _v[0] == 100 else STATE_FALSE
 
-            if result:
-                patch_zone(zoneid, application, _actionid)
-            else:
-                for dsuid, values in self.device_events.items():
-                    patch_device(
-                        dsuid, values['attributes'], _actionid
-                    )
+            for dsuid, value in self.device_events.items():
+                _state, _actionid = zone_state(value['application'])
+
+                if _state == "zone":
+                    patch_zone(zoneid, value['application'], _actionid)
+                if _state == "device":
+                    for dsuid, values in self.device_events.items():
+                        patch_device(
+                            dsuid, values['attributes'], _actionid
+                        )
+
             self.clean_events()
 
     def clean_events(self):

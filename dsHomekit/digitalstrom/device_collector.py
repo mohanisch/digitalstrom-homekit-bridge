@@ -1,14 +1,9 @@
+import json
 import time
-import yaml
 from typing import Any
 from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API, HUE_DEVICES
-from ..config import args
-
-with open(args.config_path + "/config.yml", "r") as stream:
-    try:
-        dsconfig_file = yaml.safe_load(stream)
-    except yaml.YAMLError as exc:
-        print(exc)
+from ..config import file as configfile
+from ..utils.helper import generate_dsuid
 
 
 def collect_data(uri: str, data_filter: str = "") -> list:
@@ -17,14 +12,14 @@ def collect_data(uri: str, data_filter: str = "") -> list:
 
     if (
             data_filter == "devices" and
-            dsconfig_file is not None and
-            "devices" in dsconfig_file
+            configfile is not None and
+            "devices" in configfile
     ):
         _filtered_response = Any
-        if "include" in dsconfig_file["devices"]:
-            _filtered_response = [x for x in _response if x['id'] in dsconfig_file["devices"]["include"]]
-        if "exclude" in dsconfig_file["devices"]:
-            _filtered_response = [x for x in _response if x['id'] not in dsconfig_file["devices"]["exclude"]]
+        if "include" in configfile["devices"]:
+            _filtered_response = [x for x in _response if x['id'] in configfile["devices"]["include"]]
+        if "exclude" in configfile["devices"]:
+            _filtered_response = [x for x in _response if x['id'] not in configfile["devices"]["exclude"]]
         return _filtered_response
     else:
         return _response
@@ -40,13 +35,14 @@ class DssCollector(object):
         self._submodules = collect_data("/submodules")
         self._zones = {}
         self._apartment = {}
+        self._measurements = {}
 
         self._device_states = {}
         self.collected_zone = {}
 
         self._transform_zones()
+        self._transform_measurements()
         self._transform_output_devices()
-        self._transform_input_devices()
 
         self.gather_devices_status()
 
@@ -57,7 +53,7 @@ class DssCollector(object):
         last_change = int(time.time())
 
         _apartment_states = {}
-        if 'absent' in dsconfig_file and dsconfig_file['absent']:
+        if 'absent' in configfile and configfile['absent']:
             _absent_state = apartment_status['access']['absent']
             _apartment_states['apartmentAbsents'] = {
                 "state": "on" if _absent_state else "off",
@@ -92,23 +88,21 @@ class DssCollector(object):
                 }}
                 self._device_states.update(d)
 
-        for device in self._transform_input_devices():
-            if device['service'] == 'sensor':
-                _states = {}
+        for device in self._transform_measurements():
+            _states = {}
+            zone_attributes = ({v['id']: v for v in zones_status}).get(device['zoneid'])['attributes']
+            _dsuid = generate_dsuid(device['dsuid'])
 
-                zone_attributes = ({v['id']: v for v in zones_status}).get(device['zoneid'])['attributes']
-                if 'measurements' in zone_attributes:
-                    zone_measurements = zone_attributes['measurements']
-
-                    for dsuid, value in zone_measurements.items():
-                        _states[dsuid] = {
-                            "value": value,
-                        }
-                    s = {device['dsuid']: {
-                        "states": _states,
-                        "last_change": last_change
-                    }}
-                    self._device_states.update(s)
+            zone_measurements = zone_attributes['measurements']
+            for dsuid, value in zone_measurements.items():
+                _states[dsuid] = {
+                    "value": value,
+                }
+            s = {device['dsuid']: {
+                "states": _states,
+                "last_change": last_change
+            }}
+            self._device_states.update(s)
 
         from dsHomekit.digitalstrom import dsrequest
         params = {
@@ -132,8 +126,8 @@ class DssCollector(object):
 
     def get_entities(self):
         return self._transform_output_devices() + \
-               self._transform_input_devices() + \
                self._transform_user_defined_states() + \
+               self._transform_measurements() + \
                self._transform_apartment()
 
     def get_zone(self, zoneid: int):
@@ -187,38 +181,28 @@ class DssCollector(object):
                 _devices.append(d)
         return _devices
 
-    def _transform_input_devices(self):
-        _input_devices = []
+    def _transform_measurements(self):
+        zones_status = collect_data("/zones/status")
+        _measurements = []
 
-        for device in self._devices:
-            function_attributes = ({v['id']: v['attributes'] for v in self._function_blocks}).get(device['id'])
-            device_mode = ""
+        for zone in zones_status:
+            if self.get_zone(zone['id']) and 'measurements' in zone['attributes']:
+                zone_name = self.get_zone(zone['id'])['name']
 
-            if 'sensorInputs' in function_attributes:
-                for chars in function_attributes['sensorInputs']:
-                    device_chars = []
-
-                    if 'type' in chars['attributes'] and chars['attributes']['usage'] == 'zone':
-                        device_chars.append(chars['attributes']['type'].capitalize())
-                        device_type = chars['attributes']['type']
-
-                        zone = self.get_zone(device['attributes']['zone'])['name']
-                        if device_type:
-                            s = {
-                                "entity_id": device['id'] + "." + device_type,
-                                "dsuid": device['id'],
-                                "name": zone + " " + device['attributes']['name'],
-                                "present": device['attributes']['present'],
-                                "zoneid": device['attributes']['zone'],
-                                "zone": zone,
-                                "chars": device_chars,
-                                "mode": device_mode,
-                                "support": None,
-                                "service": 'sensor',
-                                "model": function_attributes['technicalName']
-                            }
-                            _input_devices.append(s)
-        return _input_devices
+                for measurement in zone['attributes']['measurements']:
+                    _dsuid = generate_dsuid(zone['id'])
+                    m = {
+                        "entity_id": _dsuid + "." + measurement,
+                        "dsuid": _dsuid,
+                        "name": zone_name + " " + measurement,
+                        "zoneid": zone['id'],
+                        "zone": zone_name,
+                        "chars": [measurement.capitalize()],
+                        "support": None,
+                        "service": 'sensor',
+                    }
+                    _measurements.append(m)
+        return _measurements
 
     def _transform_user_defined_states(self):
         _user_defined_states = []
@@ -241,7 +225,7 @@ class DssCollector(object):
     def _transform_apartment(self):
         _apartment_states = []
 
-        if 'absent' in dsconfig_file and dsconfig_file['absent']:
+        if 'absent' in configfile and configfile['absent']:
             d = {
                 "entity_id": "apartmentAbsents.switch",
                 "dsuid": "apartmentAbsents",
