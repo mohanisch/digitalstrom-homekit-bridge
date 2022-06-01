@@ -3,13 +3,15 @@ loglevel: debug
 
 devices:
   include:
-    - "2be3b8be475c514080b2cb89c97354d100"  # Arbeitszimmer Monitor
+#    - "2be3b8be475c514080b2cb89c97354d100"  # Arbeitszimmer Monitor
 #    - "302ed89f43f0000000000580000d7e9200"  # Arbeitszimmer Stehlampe
 #    - "303505d7f800000000000080000460ba00"
 #    - "3504175fe0000000000000000008762e00"  # Arbeitzimmer Rollo
 #    - "3504175fe00000000000000000087f0600"  # Wohnzimmer rollo tür
 #    - "3504175fe00000000000000000087eed00"  # Wohnzimmer rollo fenster
-#    - "3504175fe0000000000000000000778600"  # Wohnzimmer Stehlampe
+    - "3504175fe0000000000000000000778600"  # Wohnzimmer Stehlampe
+    - "4faa9257cfe35190806353f476a1ed1f00"  # Wohnzimmer TV Licht
+    - "303505d7f800000000000080000460fe00"  # Küche Licht
 #  exclude:
 #    - "2be3b8be475c514080b2cb89c97354d100"  # Arbeitszimmer Monitor
 

@@ -203,7 +203,6 @@ class Light(Accessory):
             #             self.
             #             _attributes.update({'x': self.xy[0]})
             #             _attributes.update({'y': self.xy[1]})
-            print(char, values)
 
 
 
