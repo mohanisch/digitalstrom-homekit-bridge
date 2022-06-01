@@ -16,7 +16,7 @@ from dsHomekit.const import (
     CHAR_HUE,
     CHAR_SATURATION,
     CHAR_COLOR_TEMPERATURE,
-    ATTR_BRIGHTNESS
+    ATTR_BRIGHTNESS, ATTR_HUE
 )
 
 
@@ -76,11 +76,14 @@ class Light(Accessory):
 
         if self.char_on.value == 0:  # and self.char_brightness != 0:
             self.brightness = 0
+            self.accessory_state = 0
         else:
             if self.brightness_supported:
                 self.brightness = self.char_brightness.value
+                self.accessory_state = 1
             else:
                 self.brightness = 100
+                self.accessory_state = 1
 
         _attributes = {}
 
@@ -182,6 +185,27 @@ class Light(Accessory):
                     self.brightness = _value
                     if self.brightness_supported:
                         self.char_brightness.set_value(self.brightness)
+
+            if char == "saturation" and current_time - 3 < device_services['last_change']:
+                _value = round(values['value'])
+                self.saturation = _value
+                self.char_saturation.set_value(self.saturation)
+            if char == "colortemp" and current_time - 3 < device_services['last_change']:
+                _value = round(values['value'])
+                self.char_colortemp.set_value(_value)
+            #     print("char:", char, values)
+            #     if self.support['hue']:
+            #         self.hue = _value
+            #         self.char_hue.set_value(self.hue)
+            #     else:
+            #         if self.brightness > 0:
+            #             self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
+            #             self.
+            #             _attributes.update({'x': self.xy[0]})
+            #             _attributes.update({'y': self.xy[1]})
+
+
+
 
     def async_update_state(self, new_state):
         """Update light after state change."""

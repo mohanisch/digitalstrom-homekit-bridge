@@ -35,6 +35,7 @@ CHAR_SATURATION = "Saturation"
 CHAR_COLOR_TEMPERATURE = "ColorTemperature"
 
 ATTR_BRIGHTNESS = "brightness"
+ATTR_HUE = "hue"
 ATTR_COLOR_TEMP = "color_temp"
 ATTR_HS_COLOR = "hs_color"
 ATTR_COLOR_MODE = "color_mode"
