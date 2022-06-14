@@ -59,7 +59,7 @@ class DssCollector(object):
                 "state": "on" if _absent_state else "off",
                 "last_change": last_change
             }
-        _apartment_temperature = apartment_status['measurements']['temperature']
+        _apartment_temperature = apartment_status['measurements']['temperature'] if "measurements" in apartment_status else 0
         _apartment_states['apartmentMeasurementsTemperature'] = {
             "states": {"temperature": {"value": _apartment_temperature}},
             "last_change": last_change
