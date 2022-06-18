@@ -5,7 +5,6 @@ from collections.abc import Callable, Iterable
 from typing import Any
 
 from pyhap.accessory import Bridge
-from pyhap.accessory_driver import AccessoryDriver
 from pyhap.util import callback
 
 from dsHomekit import config

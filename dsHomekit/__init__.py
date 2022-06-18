@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 from .digitalstrom import collector
 from .homekit import homekit
@@ -30,21 +31,11 @@ def add_devices():
         homekit.add_bridge_accessory(dsdevice)
 
 
-def on_open(ws):
+def run_homekit():
     homekit.setup()
-
-    def run():
-        obj = {
-            "protocol": "json",
-            "version": 1
-        }
-        ws.send(json.dumps(obj))
-
-        add_devices()
-        homekit.start()
-
-    logging.info("Start websocket client")
-    _thread.start_new_thread(run, ())
+    add_devices()
+    logging.info("Start homekit...")
+    homekit.start()
 
 
 class DsWebsocket(object):
@@ -56,7 +47,6 @@ class DsWebsocket(object):
     def on_message(ws, message):
 
         _message = json.loads(remove_control_characters(message))
-
         if "arguments" in _message:
             if _message['arguments'][0]['type'] == 'apartmentStatusChanged':
                 logging.debug("Apartment status changed")
@@ -66,17 +56,41 @@ class DsWebsocket(object):
             if _message['arguments'][0]['type'] == 'apartmentStructureChanged':
                 logging.debug("Apartment structure changed")
 
-    def on_error(self, ws, error):
+                homekit.stop()
+                time.sleep(2)
+                _thread.start_new_thread(run_homekit, ())
+
+    @staticmethod
+    def on_open(ws):
+
+        def run_websocket():
+            obj = {
+                "protocol": "json",
+                "version": 1
+            }
+            ws.send(json.dumps(obj))
+
+
+
+        logging.info("Start websocket client...")
+        _thread.start_new_thread(run_websocket, ())
+
+        logging.info("Start homekit...")
+        _thread.start_new_thread(run_homekit, ())
+
+    @staticmethod
+    def on_error(ws, error):
         logging.error(error)
 
-    def on_close(self, ws, close_status_code, close_msg):
+    @staticmethod
+    def on_close(ws, close_status_code, close_msg):
         logging.info("Close websocket")
 
     def start(self):
         websocket.enableTrace(False)
         ws = websocket.WebSocketApp(
             self.wshost,
-            on_open=on_open,
+            on_open=self.on_open,
             on_message=self.on_message,
             on_error=self.on_error,
             on_close=self.on_close

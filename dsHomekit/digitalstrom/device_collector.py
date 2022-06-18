@@ -29,20 +29,16 @@ class DssCollector(object):
     """ Class to structure dS device and hold information of devices and it states """
 
     def __init__(self):
-        self._devices = collect_data("/dsDevices", "devices")
-        self._function_blocks = collect_data("/functionBlocks")
-        self._user_defined_states = collect_data("/userDefinedStates")
-        self._submodules = collect_data("/submodules")
+        self._devices = {}
+        self._function_blocks = {}
+        self._user_defined_states = {}
+        self._submodules = {}
         self._zones = {}
         self._apartment = {}
         self._measurements = {}
 
         self._device_states = {}
         self.collected_zone = {}
-
-        self._transform_zones()
-        self._transform_measurements()
-        self._transform_output_devices()
 
         self.gather_devices_status()
 
@@ -125,6 +121,18 @@ class DssCollector(object):
         return _device_state
 
     def get_entities(self):
+        self._devices = collect_data("/dsDevices", "devices")
+        self._function_blocks = collect_data("/functionBlocks")
+        self._user_defined_states = collect_data("/userDefinedStates")
+        self._submodules = collect_data("/submodules")
+
+        self._transform_zones()
+        self._transform_measurements()
+        self._transform_output_devices()
+
+
+
+
         return self._transform_output_devices() + \
                self._transform_user_defined_states() + \
                self._transform_measurements() + \
