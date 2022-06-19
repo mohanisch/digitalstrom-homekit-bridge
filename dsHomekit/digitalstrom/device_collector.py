@@ -40,8 +40,6 @@ class DssCollector(object):
         self._device_states = {}
         self.collected_zone = {}
 
-        self.gather_devices_status()
-
     def gather_devices_status(self):
         devices_status_attributes = collect_data("/dsDevices/status")
         zones_status = collect_data("/zones/status")
@@ -114,6 +112,7 @@ class DssCollector(object):
             }
         self._device_states.update(_user_defined_states)
 
+        print(self._device_states)
         return self._device_states
 
     def get_device_state(self, dsuid: str):
@@ -130,7 +129,7 @@ class DssCollector(object):
         self._transform_measurements()
         self._transform_output_devices()
 
-
+        self.gather_devices_status()
 
 
         return self._transform_output_devices() + \
