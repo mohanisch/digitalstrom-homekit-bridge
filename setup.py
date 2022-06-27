@@ -31,6 +31,8 @@ setup(
                       "requests",
                       "HAP-python[QRCode]",
                       "rgbxy",
-                      "PyYAML"],
+                      "PyYAML",
+                      "Flask",
+                      "waitress"],
     zip_safe=False
 )
