@@ -1,5 +1,5 @@
 import logging
-from dsHomekit.config import read_config_file as c
+from .config import read_config_file as c
 from .utils.helper import remove_control_characters, threaded
 
 

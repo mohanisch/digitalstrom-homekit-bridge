@@ -3,7 +3,7 @@ import sys
 import threading
 from time import sleep
 
-from dsHomekit.dashboard import run_server
+from .dashboard import run_server
 from .const import REQUIRED_PYTHON_VER
 
 
@@ -37,6 +37,7 @@ def start_websocket():
             from dsHomekit.digitalstrom.websocket import start_websocket
             start_websocket()
             break
+
 
 def start_homekit():
     from .config import read_config_file
