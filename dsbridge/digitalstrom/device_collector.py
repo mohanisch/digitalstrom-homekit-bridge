@@ -200,7 +200,8 @@ class DssCollector(object):
         _measurements = []
 
         for zone in zones_status:
-            if self.get_zone(zone['id']) and 'measurements' in zone['attributes']:
+
+            if self.get_zone(zone['id']) and 'attributes' in zone and 'measurements' in zone['attributes']:
                 zone_name = self.get_zone(zone['id'])['name']
 
                 for measurement in zone['attributes']['measurements']:

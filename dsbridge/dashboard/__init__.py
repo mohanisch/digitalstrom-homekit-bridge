@@ -7,6 +7,7 @@ from waitress import serve
 
 from .. import config
 from ..helper import write_config
+from ..homekit import homekit
 
 http = Flask(__name__)
 http.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
@@ -33,19 +34,17 @@ def main():
 
 
 @http.route("/homekit/state")
-def homekit():
-    from ..homekit import homekit
+def homekit_state():
     state = homekit.bridge_state()
 
     return str(state.paired)
 
+
 @http.route("/save-devices", methods=['GET', 'POST'])
 def save_devices():
-    import yaml
-
     data = {"devices": {"include": request.form.getlist('devices')}}
 
-    from ..utils.helper import write_config
+    from ..helper import write_config
     write_config(config.args.config_path + '/config.yml', data)
 
     return {"ok": True}
@@ -59,7 +58,6 @@ def requesttoken():
         """modify/update the information for <user_id>"""
         password = request.form.get('password')
         response = create_application_token(password)
-        print(response)
 
     if response['ok']:
         data = {"token": response['token']}
@@ -79,7 +77,6 @@ def onboarding(step):
     initial_config = False
     paired = False
 
-    #if homekit_state.paired:
     if dstoken:
         step = 'devices'
     if initial_config:
@@ -101,13 +98,12 @@ def onboarding(step):
 
         return render_template(
             'onboarding_devices.html',
-            entities=res  # json.dumps(b)
+            entities=res
         )
     if step == 'pairing':
-        from homekit.homekit import homekit
-        homekit_state = homekit.bridge_state()
+        bridge_state = homekit.bridge_state()
         stream = BytesIO()
-        QRCode(xhm_uri(homekit_state.pincode, homekit_state.setup_id)).svg(
+        QRCode(xhm_uri(bridge_state.pincode, bridge_state.setup_id)).svg(
             stream,
             scale=5,
             xmldecl=False,
@@ -115,12 +111,11 @@ def onboarding(step):
             module_color='#2c3d2d'
         )
         qr = stream.getvalue().decode('utf-8')
-        del homekit
 
         return render_template(
             'onboarding_pairing.html',
             qrcode=qr,
-            pincode=homekit_state.pincode.decode()
+            pincode=bridge_state.pincode.decode()
         )
 
 
