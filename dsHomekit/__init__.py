@@ -1,6 +1,6 @@
 import logging
 from .config import read_config_file as c
-from .utils.helper import remove_control_characters, threaded
+from .helper import remove_control_characters, threaded
 
 
 def _loglevel():

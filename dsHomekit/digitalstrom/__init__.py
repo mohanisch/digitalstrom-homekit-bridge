@@ -1,8 +1,8 @@
 import json
 import logging
 
+from dsHomekit.helper import threaded
 from .const import SMART_HOME_API, SYSTEM_API
-from ..utils.helper import threaded
 from .device_collector import DssCollector
 
 

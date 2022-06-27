@@ -6,7 +6,7 @@ from pyqrcode import QRCode
 from waitress import serve
 
 from dsHomekit import config
-from dsHomekit.utils.helper import write_config
+from dsHomekit.helper import write_config
 
 http = Flask(__name__)
 http.config['JSONIFY_PRETTYPRINT_REGULAR'] = True

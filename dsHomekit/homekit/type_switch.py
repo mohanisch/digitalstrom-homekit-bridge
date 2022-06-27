@@ -7,7 +7,7 @@ from pyhap.const import CATEGORY_SWITCH
 from dsHomekit.const import CHAR_ON, STATE_ON
 from dsHomekit.homekit import collector
 from dsHomekit.homekit.accessories import TYPES
-from dsHomekit.utils.helper import threaded
+from dsHomekit.helper import threaded
 from . import event_decider
 
 

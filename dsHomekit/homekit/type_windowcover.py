@@ -7,7 +7,7 @@ from pyhap.const import (
 from dsHomekit.homekit import collector
 from . import event_decider
 from dsHomekit.homekit.accessories import TYPES
-from dsHomekit.utils.helper import threaded
+from dsHomekit.helper import threaded
 
 
 @TYPES.register("WindowCovering")

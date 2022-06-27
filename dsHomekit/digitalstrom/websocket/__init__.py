@@ -6,7 +6,7 @@ import time
 import websocket
 
 from dsHomekit.config import read_config_file as c, args
-from dsHomekit.utils.helper import remove_control_characters
+from dsHomekit.helper import remove_control_characters
 
 
 def start_websocket():
