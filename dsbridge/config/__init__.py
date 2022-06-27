@@ -1,6 +1,6 @@
 import argparse
 import yaml
-from dsHomekit.const import RESTART_EXIT_CODE
+from ..const import RESTART_EXIT_CODE
 
 
 def get_arguments() -> argparse.Namespace:
@@ -42,8 +42,16 @@ def get_arguments() -> argparse.Namespace:
 
 
 def read_config_file():
+    _configfile = args.config_path + "/config.yml"
+
+    import os.path
+    file_exists = os.path.isfile(_configfile)
+
+    if not file_exists:
+        open(_configfile, "w")
+
     _file = {}
-    with open(args.config_path + "/config.yml", "r") as stream:
+    with open(_configfile, "r") as stream:
         try:
             _file = yaml.safe_load(stream)
             if _file is None:

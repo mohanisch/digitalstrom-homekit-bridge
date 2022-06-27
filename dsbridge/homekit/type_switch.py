@@ -4,10 +4,10 @@ import time
 from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_SWITCH
 
-from dsHomekit.const import CHAR_ON, STATE_ON
-from dsHomekit.homekit import collector
-from dsHomekit.homekit.accessories import TYPES
-from dsHomekit.helper import threaded
+from ..const import CHAR_ON, STATE_ON
+from ..homekit import collector
+from ..homekit.accessories import TYPES
+from ..helper import threaded
 from . import event_decider
 
 

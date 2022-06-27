@@ -4,10 +4,10 @@ from pyhap.accessory import Accessory
 from pyhap.const import (
     CATEGORY_WINDOW_COVERING,
 )
-from dsHomekit.homekit import collector
 from . import event_decider
-from dsHomekit.homekit.accessories import TYPES
-from dsHomekit.helper import threaded
+from ..homekit import collector
+from ..homekit.accessories import TYPES
+from ..helper import threaded
 
 
 @TYPES.register("WindowCovering")

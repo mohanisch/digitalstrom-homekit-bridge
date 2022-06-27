@@ -13,7 +13,7 @@ BRIDGE_MODEL = "Bridge"
 BRIDGE_NAME = "Home Assistant Bridge"
 SHORT_BRIDGE_NAME = "HASS Bridge"
 SHORT_ACCESSORY_NAME = "HASS Accessory"
-BRIDGE_SERIAL_NUMBER = "homekit.bridge"
+BRIDGE_SERIAL_NUMBER = "dshomekit.bridge"
 MANUFACTURER = "Home Assistant"
 
 ATTR_MANUFACTURER = None
@@ -22,10 +22,10 @@ ATTR_MODEL = None
 
 CONF_NAME: Final = "name"
 
-DOMAIN = "homekit"
+DOMAIN = "dsbridge"
 HOMEKIT_FILE = ".homekit.state"
-HOMEKIT_PAIRING_QR = "homekit-pairing-qr"
-HOMEKIT_PAIRING_QR_SECRET = "homekit-pairing-qr-secret"
+HOMEKIT_PAIRING_QR = "dsbridge-pairing-qr"
+HOMEKIT_PAIRING_QR_SECRET = "dsbridge-pairing-qr-secret"
 
 STATE_ON = "on"
 CHAR_ON = "On"

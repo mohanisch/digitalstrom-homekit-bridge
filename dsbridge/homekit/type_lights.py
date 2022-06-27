@@ -3,11 +3,11 @@ import time
 
 from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_LIGHTBULB
-from dsHomekit.homekit import collector
-from dsHomekit.homekit.accessories import TYPES
-from dsHomekit.helper import threaded
+from ..homekit import collector
+from ..homekit.accessories import TYPES
+from ..helper import threaded
 
-from dsHomekit.const import (
+from ..const import (
     STATE_ON,
     CHAR_ON,
     CHAR_BRIGHTNESS,

@@ -1,8 +1,8 @@
 from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_SENSOR
 
-from dsHomekit.homekit import collector
-from dsHomekit.homekit.accessories import TYPES
+from ..homekit import collector
+from ..homekit.accessories import TYPES
 
 
 @TYPES.register("TemperatureSensor")

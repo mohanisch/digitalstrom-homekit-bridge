@@ -1,0 +1,2 @@
+include dsbridge/dashboard/static/*
+include dsbridge/dashboard/templates/*

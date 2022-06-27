@@ -1,6 +1,6 @@
 import uuid
 
-from dsHomekit.config import args
+from ..config import args
 
 
 def generate_dsuid(name: str) -> str:
@@ -11,7 +11,7 @@ def generate_dsuid(name: str) -> str:
 def create_application_token(password):
     import requests
     import urllib3
-    from dsHomekit.digitalstrom import SYSTEM_API
+    from homekit.digitalstrom import SYSTEM_API
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
     result = {}

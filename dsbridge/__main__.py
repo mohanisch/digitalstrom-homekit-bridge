@@ -34,7 +34,7 @@ def start_websocket():
         sleep(2)
         c = read_config_file()
         if 'token' in c and c['token']:
-            from dsHomekit.digitalstrom.websocket import start_websocket
+            from .digitalstrom.websocket import start_websocket
             start_websocket()
             break
 
@@ -46,7 +46,7 @@ def start_homekit():
         c = read_config_file()
 
         if 'devices' in c:
-            from dsHomekit.homekit import start_homekit
+            from .homekit import start_homekit
             start_homekit()
             break
 

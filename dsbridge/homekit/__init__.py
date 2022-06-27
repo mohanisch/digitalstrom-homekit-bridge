@@ -3,14 +3,14 @@ from __future__ import annotations
 import _thread
 import logging
 from collections.abc import Callable
-from dsHomekit import config
+from .. import config
 
 from .accessories import get_accessory, DsAccessoryDriver, DsBridge
 from .aid_manager import AccessoryAidStorage
 from .util import async_show_setup_message
 
-from dsHomekit.digitalstrom.device_collector import DssCollector
-from dsHomekit.digitalstrom import EventPatcher
+from ..digitalstrom.device_collector import DssCollector
+from ..digitalstrom import EventPatcher
 
 collector = DssCollector()
 

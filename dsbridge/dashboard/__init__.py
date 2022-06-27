@@ -5,16 +5,13 @@ from flask import Flask, render_template, redirect, request
 from pyqrcode import QRCode
 from waitress import serve
 
-from dsHomekit import config
-from dsHomekit.helper import write_config
+from .. import config
+from ..helper import write_config
 
 http = Flask(__name__)
 http.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 http.config['TEMPLATES_AUTO_RELOAD'] = True
 http.jinja_env.auto_reload = True
-
-
-# homekit_state = homekit.bridge_state()
 
 
 @http.route("/")
@@ -37,7 +34,7 @@ def main():
 
 @http.route("/homekit/state")
 def homekit():
-    from dsHomekit.homekit import homekit
+    from ..homekit import homekit
     state = homekit.bridge_state()
 
     return str(state.paired)
@@ -107,7 +104,7 @@ def onboarding(step):
             entities=res  # json.dumps(b)
         )
     if step == 'pairing':
-        from dsHomekit.homekit import homekit
+        from homekit.homekit import homekit
         homekit_state = homekit.bridge_state()
         stream = BytesIO()
         QRCode(xhm_uri(homekit_state.pincode, homekit_state.setup_id)).svg(

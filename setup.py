@@ -7,7 +7,7 @@ with io.open("README.md", "rt", encoding="utf8") as f:
     readme = f.read()
 
 setup(
-    name="digitalstrom-homekit-bridge",
+    name="dsbridge",
     version="2.0.0",
     url="",
     maintainer="Marco Hanisch",
@@ -18,7 +18,7 @@ setup(
     include_package_data=True,
     entry_points={
         "console_scripts": [
-            "dsHomekit = dsHomekit.__main__:main",
+            "dsbridge = dsbridge.__main__:main",
         ]
     },
     install_requires=["websocket",
@@ -33,6 +33,7 @@ setup(
                       "rgbxy",
                       "PyYAML",
                       "Flask",
-                      "waitress"],
+                      "waitress",
+                      "base36"],
     zip_safe=False
 )
