@@ -29,10 +29,10 @@ def get_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--loglevel", help="Loglevel: INFO, DEBUG", default="INFO"
     )
-    required_named = parser.add_argument_group('required named arguments')
-    required_named.add_argument(
-        "--token", help="Token created on dss", default="xxx", required=True
+    parser.add_argument(
+        "--token", help="Token created on dss", default="xxx"
     )
+    required_named = parser.add_argument_group('required named arguments')
     required_named.add_argument(
         "--config-path", help="Path to config.yml", default="", required=True
     )
@@ -41,10 +41,18 @@ def get_arguments() -> argparse.Namespace:
     return arguments
 
 
+def read_config_file():
+    _file = {}
+    with open(args.config_path + "/config.yml", "r") as stream:
+        try:
+            _file = yaml.safe_load(stream)
+            if _file is None:
+                _file = {}
+        except yaml.YAMLError as exc:
+            print(exc)
+
+    return _file
+
+
 args = get_arguments()
 
-with open(args.config_path + "/config.yml", "r") as stream:
-    try:
-        file = yaml.safe_load(stream)
-    except yaml.YAMLError as exc:
-        print(exc)

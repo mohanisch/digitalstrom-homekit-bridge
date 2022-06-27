@@ -8,7 +8,7 @@ with io.open("README.md", "rt", encoding="utf8") as f:
 
 setup(
     name="digitalstrom-homekit-bridge",
-    version="1.0.18",
+    version="2.0.0",
     url="",
     maintainer="Marco Hanisch",
     maintainer_email="marco.hanisch@webkompleks.de",

@@ -1,18 +1,21 @@
-from ..config import args
 from .const import SYSTEM_API
 
 import requests
+from requests.adapters import HTTPAdapter
 import urllib3
+
+import inspect
+
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+
 class DsRequest:
-    def __init__(self, base_url, **kwargs):
+    def __init__(self, base_url, token, **kwargs):
+        self.token = token
         self.base_url = base_url
         self.session = requests.Session()
-        self.headers = {
-            "Authorization": "Bearer %s" % args.token
-        }
+        self.headers = {"Authorization": "Bearer %s" % self.token}
 
         for arg in kwargs:
             if isinstance(kwargs[arg], dict):
@@ -44,7 +47,8 @@ class DsRequest:
         )
 
     def get_token(self):
-        param = {"loginToken": args.token}
+        param = {"loginToken": "%s" % self.token}
+
         return self.session.get(
             self.base_url + SYSTEM_API + "/loginApplication",
             headers=self.headers,
@@ -61,4 +65,3 @@ class DsRequest:
             else:
                 destination[key] = value
         return destination
-

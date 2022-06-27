@@ -1,8 +1,27 @@
 import threading
 import tempfile
 import errno
+import time
 import unicodedata
-import uuid
+import yaml
+import os
+
+
+def write_config(path, data):
+    cur_yaml = {}
+    if isWritable(path):
+        with open(path, 'r') as file:
+            try:
+                cur_yaml = yaml.safe_load(file)
+            except yaml.YAMLError as exc:
+                print(exc)
+
+        if cur_yaml is None:
+            cur_yaml = {}
+
+        cur_yaml.update(data)
+        with open(path, 'w') as file:
+            yaml.safe_dump(cur_yaml, file)
 
 
 def threaded(fn):
@@ -19,8 +38,9 @@ def remove_control_characters(s):
 
 
 def isWritable(path):
+    wkspFldr = os.path.dirname(path)
     try:
-        testfile = tempfile.TemporaryFile(dir=path)
+        testfile = tempfile.TemporaryFile(dir=wkspFldr)
         testfile.close()
     except OSError as e:
         if e.errno == errno.EACCES:  # 13
@@ -30,6 +50,12 @@ def isWritable(path):
     return True
 
 
-def generate_dsuid(name: str):
-    _uuid = uuid.uuid3(uuid.NAMESPACE_OID, name)
-    return str(_uuid).replace("-", "") + '00'
+def wait_until(somepredicate, timeout=600, period=0.25, *args, **kwargs):
+    mustend = time.time() + timeout
+    while time.time() < mustend:
+
+        if somepredicate(*args, **kwargs):
+            return True
+        time.sleep(period)
+    return False
+

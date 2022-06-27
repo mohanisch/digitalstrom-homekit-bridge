@@ -3,10 +3,8 @@ import time
 
 from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_LIGHTBULB
-
-from dsHomekit.digitalstrom import collector
+from dsHomekit.homekit import collector
 from dsHomekit.homekit.accessories import TYPES
-from dsHomekit import digitalstrom
 from dsHomekit.utils.helper import threaded
 
 from dsHomekit.const import (
@@ -18,6 +16,7 @@ from dsHomekit.const import (
     CHAR_COLOR_TEMPERATURE,
     ATTR_BRIGHTNESS, ATTR_HUE
 )
+from . import event_decider
 
 
 @TYPES.register("Light")
@@ -29,6 +28,7 @@ class Light(Accessory):
 
         self.chars = device['chars']
         self.dsuid = device['dsuid']
+        self.entity_id = device['entity_id']
         self.support = device['support']
         self.zoneid = device['zoneid']
         self.accessory_state = 0
@@ -45,7 +45,7 @@ class Light(Accessory):
         self.colortemp_supported = self.support['colortemp']
         self.color_supported = self.support['color']
 
-        self.states = collector.get_device_state(self.dsuid)
+        self.states = collector.get_device_state(self.entity_id)
 
         if self.brightness_supported:
             self.chars.append(CHAR_BRIGHTNESS)
@@ -103,7 +103,7 @@ class Light(Accessory):
 
         _attributes.update({'brightness': self.brightness})
 
-        digitalstrom.event_decider.device_event(
+        event_decider.device_event(
             self.dsuid,
             self.zoneid,
             _attributes,
@@ -171,7 +171,7 @@ class Light(Accessory):
     @Accessory.run_at_interval(3)
     async def run(self):
         """Handle accessory driver started event."""
-        device_services = collector.get_device_state(self.dsuid)
+        device_services = collector.get_device_state(self.entity_id)
         current_time = int(time.time())
 
         for char, values in device_services['states'].items():
@@ -203,9 +203,6 @@ class Light(Accessory):
             #             self.
             #             _attributes.update({'x': self.xy[0]})
             #             _attributes.update({'y': self.xy[1]})
-
-
-
 
     def async_update_state(self, new_state):
         """Update light after state change."""

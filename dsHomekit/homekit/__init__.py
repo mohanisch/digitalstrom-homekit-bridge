@@ -1,18 +1,18 @@
 from __future__ import annotations
 
+import _thread
 import logging
-from collections.abc import Callable, Iterable
-from typing import Any
-
-from pyhap.accessory import Bridge
-from pyhap.util import callback
-
+from collections.abc import Callable
 from dsHomekit import config
-from .accessories import get_accessory, HomeDriver
+
+from .accessories import get_accessory, DsAccessoryDriver, DsBridge
 from .aid_manager import AccessoryAidStorage
-from . import type_lights, type_windowcover, type_sensors, type_switch
 from .util import async_show_setup_message
-from ..core import Event
+
+from dsHomekit.digitalstrom.device_collector import DssCollector
+from dsHomekit.digitalstrom import EventPatcher
+
+collector = DssCollector()
 
 STATUS_READY = 0
 STATUS_RUNNING = 1
@@ -20,6 +20,134 @@ STATUS_STOPPED = 2
 STATUS_WAIT = 3
 
 CALLBACK_TYPE = Callable[[], None]
+
+
+def add_devices():
+    dsdevices = collector.get_entities()
+
+    for dsdevice in dsdevices:
+        homekit.add_bridge_accessory(dsdevice)
+
+
+def start_homekit():
+    def run_homekit():
+        homekit.setup()
+        add_devices()
+        logging.info("Start homekit...")
+        homekit.start()
+
+    _thread.start_new_thread(run_homekit, ())
+
+
+STATE_ON = "on"
+STATE_OFF = "off"
+STATE_UP = "up"
+STATE_DOWN = "down"
+
+
+class EventDecider(object):
+    def __init__(self):
+        self.hap_events = None
+        self.device_events = {}
+
+    def recieve_hap_event(self, events):
+        _events = {}
+        for event in events:
+            if 'ev' in event:
+                continue
+            else:
+                dsuid = get_dsuid_by_aid(event['aid']).split('.')[0]
+                _events[dsuid] = {}
+                self.hap_events = list(dict.fromkeys(_events))
+
+    def device_event(
+            self, dsuid: str,
+            zoneid: int,
+            attributes: dict,
+            application: str = ""
+    ):
+        _count_hap_events = len(self.hap_events)
+        _count_device_events = 0
+
+        if "brightness" in attributes:
+            _test_action = STATE_OFF if attributes['brightness'] == 0 else STATE_ON if attributes[
+                                                                                           'brightness'] == 100 else "dimm"
+        else:
+            _test_action = "bla"
+
+        if dsuid in self.hap_events and _count_device_events <= _count_hap_events:
+            self.device_events[dsuid] = {
+                "zoneid": zoneid,
+                "attributes": attributes,
+                "application": application,
+                "action": _test_action
+            }
+            _count_device_events = len(self.device_events)
+
+        if _count_device_events == _count_hap_events:
+
+            # if self._action('on'):
+            #     print("on", self._action('on'))
+            # if self._action('off'):
+            #     print("off", self._action('off'))
+            if self._action('dimm'):
+                for dsuid, value in self.device_events.items():
+                    EventPatcher().patch_device(
+                        dsuid, value['attributes']
+                    )
+            else:
+                for dsuid, value in self.device_events.items():
+                    _state, _actionid = self._zone_state(value, value['application'])
+
+                    if _state == "zone":
+                        EventPatcher().patch_zone(zoneid, value['application'], _actionid)
+                    if _state == "device":
+                        EventPatcher().patch_device(
+                            dsuid, value['attributes'], _actionid
+                        )
+
+            self.clean_events()
+
+    def _action(self, action):
+        return all(value['action'] == action for value in self.device_events.values())
+
+    def _zone_state(self, value, _application):  # TODO: func name muss angepasst werden
+        zone_devices = collector.get_zone(value['zoneid'])['devices']
+        _v = []
+        STATE_TRUE, STATE_FALSE = "", ""
+
+        _event_type = "zone" if all(
+            elem in list(self.device_events.keys()) for elem in zone_devices[_application]) else "device"
+
+        # TODO: Muss als constante hinterlegt werden, für jeden möglichen type
+        if value['application'] == 'lights':
+            self.varname = "brightness"
+            STATE_TRUE = STATE_ON
+            STATE_FALSE = STATE_OFF
+        if value['application'] == 'shades':
+            self.varname = "shadePositionOutside"
+            if _event_type == "device":
+                STATE_TRUE = STATE_ON
+                STATE_FALSE = STATE_OFF
+            else:
+                STATE_TRUE = STATE_UP
+                STATE_FALSE = STATE_DOWN
+
+        for e, a in self.device_events.items():
+            if a['application'] == _application:
+                _v.append(a['attributes'][self.varname])
+        _v.sort()
+
+        return \
+            _event_type, \
+            STATE_TRUE if _v[0] == 100 else STATE_FALSE
+
+    def clean_events(self):
+        self.hap_events = None
+        self.device_events = {}
+
+
+event_decider = EventDecider()
 
 
 class HomeKit:
@@ -47,11 +175,11 @@ class HomeKit:
     def setup(self):
         """Set up bridge and accessory driver."""
         logging.info("Setup HomeKit driver")
-        self.driver = HomeDriver(
+        self.driver = DsAccessoryDriver(
             port=self._port,
             persist_file=self.persist_file
         )
-        self.bridge = Bridge(self.driver, self._name)
+        self.bridge = DsBridge(self.driver, self._name)
         self.driver.add_accessory(accessory=self.bridge)
 
     def add_bridge_accessory(self, device):
@@ -67,16 +195,6 @@ class HomeKit:
             logging.exception("Failed to create a HomeKit accessory for %s (%s)", device['name'], device['dsuid'])
         return None
 
-    @callback
-    def _async_show_setup_message(self):
-        """Show the pairing setup message."""
-        async_show_setup_message(
-            "self.entry_id",
-            "self._entry_title", self.driver.accessory,
-            self.driver.state.pincode,
-            self.driver.accessory.xhm_uri(),
-        )
-
     def start(self):
         self.driver.start()
 
@@ -88,6 +206,9 @@ class HomeKit:
 
     def set_allocations(self):
         return self.aid_storage.allocations
+
+    def bridge_state(self):
+        return self.bridge.driver.state
 
 
 def get_aid_by_dsuid(dsuid: str):
@@ -106,16 +227,6 @@ def get_dsuid_by_aid(aid: int):
     if aid in allocations.values():
         dsuid = list(allocations.keys())[list(allocations.values()).index(aid)]
     return dsuid
-
-
-def async_track_state_change_event(
-        entity_ids: str | Iterable[str],
-        action: Callable[[Event], Any],
-) -> CALLBACK_TYPE:
-    for entity_id in entity_ids:
-        print(entity_id, action)
-
-    return entity_id
 
 
 homekit = HomeKit(

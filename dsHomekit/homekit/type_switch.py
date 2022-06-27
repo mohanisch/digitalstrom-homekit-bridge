@@ -4,11 +4,11 @@ import time
 from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_SWITCH
 
-from dsHomekit import digitalstrom
 from dsHomekit.const import CHAR_ON, STATE_ON
-from dsHomekit.digitalstrom import collector
+from dsHomekit.homekit import collector
 from dsHomekit.homekit.accessories import TYPES
 from dsHomekit.utils.helper import threaded
+from . import event_decider
 
 
 @TYPES.register("Switch")
@@ -20,10 +20,10 @@ class Switch(Accessory):
 
         self.chars = device['chars']
         self.dsuid = device['dsuid']
-
+        self.entity_id = device['entity_id']
         self.accessory_state = False
 
-        self.states = collector.get_device_state(self.dsuid)
+        self.states = collector.get_device_state(self.entity_id)
 
         serv_switch = self.add_preload_service('Switch')
         self.char_on = serv_switch.configure_char(
@@ -44,13 +44,14 @@ class Switch(Accessory):
             self.accessory_state = True
 
         # TODO: Muss anders funktionieren
-        digitalstrom.patch_switch(
+        event_decider.patch_switch(
             self.dsuid,
             self.accessory_state)
 
     @Accessory.run_at_interval(3)
     async def run(self):
-        device_state = collector.get_device_state(self.dsuid)
+
+        device_state = collector.get_device_state(self.entity_id)
         current_time = int(time.time())
 
         _value = device_state['state'] == STATE_ON

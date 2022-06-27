@@ -1,7 +1,7 @@
 from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_SENSOR
 
-from dsHomekit.digitalstrom import collector
+from dsHomekit.homekit import collector
 from dsHomekit.homekit.accessories import TYPES
 
 
@@ -14,6 +14,7 @@ class TemperatureSensor(Accessory):
 
         self.chars = device['chars']
         self.dsuid = device['dsuid']
+        self.entity_id = device['entity_id']
         self.temperature = 0
 
         serv_temp = self.add_preload_service('TemperatureSensor')
@@ -21,7 +22,7 @@ class TemperatureSensor(Accessory):
 
     @Accessory.run_at_interval(3)
     async def run(self):
-        device_services = collector.get_device_state(self.dsuid)
+        device_services = collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():
             if char == 'temperature':
                 _value = round(values['value'], 2)
@@ -39,6 +40,7 @@ class HumiditySensor(Accessory):
 
         self.chars = device['chars']
         self.dsuid = device['dsuid']
+        self.entity_id = device['entity_id']
         self.humidity = 80
 
         serv_temp = self.add_preload_service('HumiditySensor')
@@ -46,7 +48,7 @@ class HumiditySensor(Accessory):
 
     @Accessory.run_at_interval(60)
     async def run(self):
-        device_services = collector.get_device_state(self.dsuid)
+        device_services = collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():
             if char == 'humidity':
                 _value = round(values['value'], 2)
@@ -64,6 +66,7 @@ class LightSensor(Accessory):
 
         self.chars = device['chars']
         self.dsuid = device['dsuid']
+        self.entity_id = device['entity_id']
         self.brightness = 0
 
         serv_light = self.add_preload_service('LightSensor')
@@ -71,7 +74,7 @@ class LightSensor(Accessory):
 
     @Accessory.run_at_interval(60)
     async def run(self):
-        device_services = collector.get_device_state(self.dsuid)
+        device_services = collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():
             if char == 'brightness':
                 _value = round(values['value'], 2)
@@ -89,6 +92,7 @@ class MotionSensor(Accessory):
 
         self.chars = device['chars']
         self.dsuid = device['dsuid']
+        self.entity_id = device['entity_id']
         self.motion = False
 
         serv_motion = self.add_preload_service('MotionSensor')
@@ -96,7 +100,7 @@ class MotionSensor(Accessory):
 
     @Accessory.run_at_interval(2)
     async def run(self):
-        device_services = collector.get_device_state(self.dsuid)
+        device_services = collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():
             if char == 'motion':
                 _value = round(values['value'], 2)

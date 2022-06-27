@@ -1,0 +1,87 @@
+<html xmlns="http://www.w3.org/1999/html">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="initial-scale=0, maximum-scale=1, user-scalable=yes, width=device-width">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='waitMe.min.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='waitMe.min.css') }}">
+        <script src="{{ url_for('static', filename='jquery-3.4.1.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='waitMe.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='checkboxes.js') }}"></script>
+        <title>App</title>
+
+    </head>
+    <script>
+            $(document).ready(function () {
+                $(function($) {
+                    $( document ).bind( "enhance", function(){
+                        $( "body" ).addClass( "enhanced" );
+                    });
+
+                    $( document ).trigger( "enhance" );
+                });
+                $('input#save-devices').click( function() {
+                    $.ajax({
+                        url: "/save-devices",
+                        type: 'post',
+                        dataType: 'json',
+                        data: $("#ds_devices").serialize(),
+                        success: function(result) {
+                            console.log(result);
+                            if(result['ok']) {
+                               console.log("asdfasdf")
+                               $('#main-mid').waitMe({
+                                    effect : 'rotateplane',
+                                    text : 'Konfiguration wird gespeichert...',
+                                    bg : 'rgba(255,255,255,0.7)',
+                                    color : '#000'
+                                });
+                                setTimeout(function(){ window.location.href='/onboarding/pairing'; }, 3000);
+                            }
+                        },
+                        error: function(){
+                           console.log(arguments);
+                        }
+                    });
+                });
+            });
+        </script>
+
+  <body>
+        <div id="main">
+            <div id="main-head">
+                <div class="header">
+                    <h3>Geräte für HomeKit konfigurieren</h3>
+                </div>
+            </div>
+            <div id="main-mid">
+                <p class="beschreibung">In der folgenden List können Geräte ausgewählt werden, welche in HomeKit erscheinen sollen. Dieses kann später in den Einstellungen noch verändert werden.</p>
+                <form id="ds_devices">
+                {% for zone, entities in entities.items()  %}
+                    <div class="zonebox" style="background: #fff;padding: 5px;margin-bottom: 15px;">
+                        <h4>{{ zone }}</h4>
+                        <ul style="list-style: none; margin: 0">
+                            {% for entity in entities %}
+                            <li style="padding: 12px 10px;">
+                                <label class="checkbox" style="margin-right: 10px;" for="{{ entity.entity_id }}"><input type="checkbox" id="{{ entity.entity_id }}" value="{{ entity.entity_id }}" name="devices" >
+                                    <span class="label-text">{{ entity.name | replace(zone, '') }}
+                                        <em>{{ entity.model }}</em>
+                                    </span>
+                                </label>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endfor %}
+                </form>
+                <div id="msg-box" style="opacity: 0;">
+                    <span id="msg-box-txt"></span>
+                </div>
+            </div>
+            <div id="main-bottom">
+                <input type="button" id="save-devices" class="button-green forms" value="Weiter ...">
+            </div>
+        </div>
+
+  </body>
+</html>

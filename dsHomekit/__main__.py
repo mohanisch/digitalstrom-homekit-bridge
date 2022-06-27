@@ -1,8 +1,9 @@
+import _thread
 import sys
 import threading
-from concurrent.futures import ThreadPoolExecutor
+from time import sleep
 
-from dsHomekit import dswebsocket
+from dsHomekit.dashboard import run_server
 from .const import REQUIRED_PYTHON_VER
 
 
@@ -27,17 +28,35 @@ def check_threads() -> None:
         sys.stderr.write("Failed to count non-daemonic threads.\n")
 
 
-def run_io_tasks_in_parallel(tasks):
-    with ThreadPoolExecutor() as executor:
-        running_tasks = [executor.submit(task) for task in tasks]
-        for running_task in running_tasks:
-            running_task.result()
+def start_websocket():
+    from .config import read_config_file
+    while True:
+        sleep(2)
+        c = read_config_file()
+        if 'token' in c and c['token']:
+            from dsHomekit.digitalstrom.websocket import start_websocket
+            start_websocket()
+            break
+
+def start_homekit():
+    from .config import read_config_file
+    while True:
+        sleep(2)
+        c = read_config_file()
+
+        if 'devices' in c:
+            from dsHomekit.homekit import start_homekit
+            start_homekit()
+            break
 
 
 def main():
     validate_python()
+    _thread.start_new_thread(start_websocket, ())
+    _thread.start_new_thread(start_homekit, ())
 
-    dswebsocket.start()
+    run_server()
+
     check_threads()
 
 

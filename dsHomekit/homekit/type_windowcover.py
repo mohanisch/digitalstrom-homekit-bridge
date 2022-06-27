@@ -4,9 +4,8 @@ from pyhap.accessory import Accessory
 from pyhap.const import (
     CATEGORY_WINDOW_COVERING,
 )
-
-from dsHomekit import digitalstrom
-from dsHomekit.digitalstrom import collector
+from dsHomekit.homekit import collector
+from . import event_decider
 from dsHomekit.homekit.accessories import TYPES
 from dsHomekit.utils.helper import threaded
 
@@ -27,6 +26,7 @@ class WindowsCovering(Accessory):
 
         self.chars = device['chars']
         self.dsuid = device['dsuid']
+        self.entity_id = device['entity_id']
         self.zoneid = device['zoneid']
 
         self._supports_stop = True
@@ -88,7 +88,7 @@ class WindowsCovering(Accessory):
         _attributes = {}
         _attributes.update({'shadePositionOutside': self.char_target_position.value})
 
-        digitalstrom.event_decider.device_event(
+        event_decider.device_event(
             self.dsuid,
             self.zoneid,
             _attributes,
@@ -98,7 +98,7 @@ class WindowsCovering(Accessory):
 
     @Accessory.run_at_interval(3)
     async def run(self):
-        device_services = collector.get_device_state(self.dsuid)
+        device_services = collector.get_device_state(self.entity_id)
 
         for char, values in device_services['states'].items():
             if char == 'shadePositionOutside':

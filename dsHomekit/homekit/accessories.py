@@ -1,21 +1,23 @@
-"""Extend the basic Accessory and Bridge functions."""
 import logging
-import threading
 import time
-from typing import Any
+from typing import Any, cast
+from uuid import UUID
 
-from pyhap.accessory import get_topic
+from pyhap.util import callback as pyhap_callback
+from pyhap.accessory import get_topic, Bridge
 from pyhap.accessory_driver import AccessoryDriver, _wrap_char_setter, _wrap_acc_setter, _wrap_service_setter
 from pyhap.const import HAP_REPR_AID, HAP_REPR_IID, HAP_REPR_PID, HAP_REPR_CHARS, HAP_SERVER_STATUS, \
     HAP_PERMISSION_NOTIFY, HAP_REPR_VALUE, HAP_REPR_STATUS
 
-from dsHomekit.utils.registry import Registry
+from .util import Registry, async_show_setup_message, async_dismiss_setup_message
 
 TYPES = Registry()
 
 logger = logging.getLogger(__name__)
 
+
 def get_accessory(driver, device, aid):
+    from . import type_lights, type_windowcover, type_sensors, type_switch
     """Take state and return an accessory object if supported."""
     a_type = None
     name = device['name']
@@ -57,8 +59,9 @@ def get_accessory(driver, device, aid):
     return TYPES[a_type](driver, name, aid, device=device)
 
 
-class HomeDriver(AccessoryDriver):
+class DsAccessoryDriver(AccessoryDriver):
     """Adapter class for AccessoryDriver."""
+
     def __init__(
             self,
             **kwargs: Any
@@ -95,7 +98,7 @@ class HomeDriver(AccessoryDriver):
             if expire_time is None or time.time() > expire_time:
                 expired = True
 
-        from dsHomekit.digitalstrom import event_decider
+        from . import event_decider
         event_decider.recieve_hap_event(chars_query['characteristics'])
 
         for cq in chars_query[HAP_REPR_CHARS]:
@@ -140,7 +143,7 @@ class HomeDriver(AccessoryDriver):
                 setter_results[aid][iid] = set_result
 
                 if not char.service or (
-                    not acc.setter_callback and not char.service.setter_callback
+                        not acc.setter_callback and not char.service.setter_callback
                 ):
                     continue
                 char_to_iid[char] = iid
@@ -178,3 +181,40 @@ class HomeDriver(AccessoryDriver):
                 for iid, status in iid_status.items()
             ]
         }
+
+    @pyhap_callback
+    def pair(
+        self, client_uuid: UUID, client_public: str, client_permissions: int
+    ) -> bool:
+        """Override super function to dismiss setup message if paired."""
+        success = super().pair(client_uuid, client_public, client_permissions)
+        if success:
+            print("success")
+            async_dismiss_setup_message("self._entry_id")
+        return cast(bool, success)
+
+    @pyhap_callback
+    def unpair(self, client_uuid: UUID) -> None:
+        """Override super function to show setup message if unpaired."""
+        super().unpair(client_uuid)
+
+        if self.state.paired:
+            return
+
+        async_show_setup_message(
+            "self._entry_id",
+            "accessory_friendly_name(self._entry_title, self.accessory)",
+            self.state.pincode,
+            self.accessory.xhm_uri(),
+        )
+
+
+class DsBridge(Bridge):
+    def __init__(
+            self, driver: DsAccessoryDriver, name: str
+    ):
+        super().__init__(driver, name)
+
+    def setup_message(self) -> None:
+        """Avoid that the Pyhap setup message appears on the terminal"""
+
