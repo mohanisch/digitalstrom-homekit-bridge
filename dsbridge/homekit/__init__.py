@@ -73,7 +73,7 @@ class EventDecider(object):
             _test_action = STATE_OFF if attributes['brightness'] == 0 else STATE_ON if attributes[
                                                                                            'brightness'] == 100 else "dimm"
         else:
-            _test_action = "bla"
+            _test_action = None
 
         if dsuid in self.hap_events and _count_device_events <= _count_hap_events:
             self.device_events[dsuid] = {
@@ -90,6 +90,7 @@ class EventDecider(object):
             #     print("on", self._action('on'))
             # if self._action('off'):
             #     print("off", self._action('off'))
+
             if self._action('dimm'):
                 for dsuid, value in self.device_events.items():
                     EventPatcher().patch_device(
@@ -116,8 +117,8 @@ class EventDecider(object):
         _v = []
         STATE_TRUE, STATE_FALSE = "", ""
 
-        _event_type = "zone" if all(
-            elem in list(self.device_events.keys()) for elem in zone_devices[_application]) else "device"
+        _event_type = "zone" if all(elem in list(self.device_events.keys()) for elem in zone_devices[_application]) \
+                                and (len(list(self.device_events.keys())) > 1 ) else "device"
 
         # TODO: Muss als constante hinterlegt werden, für jeden möglichen type
         if value['application'] == 'lights':

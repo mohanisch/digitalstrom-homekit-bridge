@@ -228,7 +228,7 @@ class DssCollector(object):
 
                 d = {
                     "entity_id": generate_dsuid(user_defined_state['id']) + "." + user_defined_state['type'],
-                    "dsuid": generate_dsuid(user_defined_state['id']),
+                    "dsuid": user_defined_state['id'],
                     "name": user_defined_state['attributes']['name'],
                     "service": application,
                     "chars": None,

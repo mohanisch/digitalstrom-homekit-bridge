@@ -7,7 +7,7 @@ from waitress import serve
 
 from .. import config
 from ..helper import write_config
-from ..homekit import homekit
+
 
 http = Flask(__name__)
 http.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
@@ -35,6 +35,7 @@ def main():
 
 @http.route("/homekit/state")
 def homekit_state():
+    from ..homekit import homekit
     state = homekit.bridge_state()
 
     return str(state.paired)
@@ -101,6 +102,7 @@ def onboarding(step):
             entities=res
         )
     if step == 'pairing':
+        from ..homekit import homekit
         bridge_state = homekit.bridge_state()
         stream = BytesIO()
         QRCode(xhm_uri(bridge_state.pincode, bridge_state.setup_id)).svg(

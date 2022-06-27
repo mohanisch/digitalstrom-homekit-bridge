@@ -7,6 +7,7 @@ import websocket
 
 from ...config import read_config_file as c, args
 from ...helper import remove_control_characters
+from ...homekit import collector
 
 
 def start_websocket():
@@ -29,8 +30,6 @@ class DsWebsocket(object):
             if _message['arguments'][0]['type'] == 'apartmentStatusChanged':
                 logging.debug("Apartment status changed")
 
-                from ..device_collector import DssCollector
-                collector = DssCollector()
                 collector.gather_devices_status()
 
             if _message['arguments'][0]['type'] == 'apartmentStructureChanged':

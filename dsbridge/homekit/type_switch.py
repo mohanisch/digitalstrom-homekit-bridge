@@ -8,7 +8,6 @@ from ..const import CHAR_ON, STATE_ON
 from ..homekit import collector
 from ..homekit.accessories import TYPES
 from ..helper import threaded
-from . import event_decider
 
 
 @TYPES.register("Switch")
@@ -44,9 +43,11 @@ class Switch(Accessory):
             self.accessory_state = True
 
         # TODO: Muss anders funktionieren
-        event_decider.patch_switch(
+        from .. import digitalstrom
+        digitalstrom.EventPatcher().patch_switch(
             self.dsuid,
-            self.accessory_state)
+            self.accessory_state
+        )
 
     @Accessory.run_at_interval(3)
     async def run(self):
