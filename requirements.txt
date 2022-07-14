@@ -1,4 +1,4 @@
-HAP-python[QRCode]
+HAP-python[QRCode]==4.4.0
 setuptools
 PyQRCode
 fnvhash
