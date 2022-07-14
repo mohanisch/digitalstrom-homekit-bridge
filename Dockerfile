@@ -4,9 +4,7 @@ FROM ${ARCH}registry.gitlab.com/mfsh/docker/python:1.0.0
 COPY . /tmp
 WORKDIR /tmp
 
-ENV CRYPTOGRAPHY_DONT_BUILD_RUST=1
-
-RUN pip3 install websocket websocket-client HAP-python[QRCode] \
+RUN pip3 install websocket websocket-client HAP-python[QRCode]==4.4.0 \
     && python3 setup.py clean --all \
     && python3 setup.py build \
     && python3 setup.py install \
