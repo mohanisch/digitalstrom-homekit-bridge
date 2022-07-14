@@ -4,7 +4,6 @@ from pyhap.const import (
     CATEGORY_WINDOW_COVERING,
 )
 from . import event_decider
-from ..const import CHAR_NAME
 from ..homekit import collector
 from ..homekit.accessories import TYPES, DsAccessory
 from ..helper import threaded
