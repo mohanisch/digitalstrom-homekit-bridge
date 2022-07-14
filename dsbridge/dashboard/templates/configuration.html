@@ -1,0 +1,30 @@
+<html>
+    <head>
+        <title>HomeKit</title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+        <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+        <script src="{{ url_for('static', filename='jquery-3.4.1.min.js') }}"></script>
+        <script>
+            $(document).ready(function(){
+
+            });
+
+         </script>
+    </head>
+    <body>
+
+        <div style="margin: 0 auto;">
+            <div class="room">
+                {% for e in entities %}
+                <div class="content-box">
+                    <div class="stateless-action-tile " title="Click to activate scenario" aria-label="Click to activate scenario">
+<!--                        <img src="{{ url_for('static', filename='icons/light_off.png') }}" class="content-box-icon" alt="Scenario">-->
+                        <span class="stateless-action-name " title="">{{ e.name }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </body>
+</html>

@@ -45,7 +45,7 @@ def start_homekit():
         sleep(2)
         c = read_config_file()
 
-        if 'devices' in c:
+        if 'entities' in c:
             from .homekit import start_homekit
             start_homekit()
             break

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import io
 import logging
 import secrets
@@ -42,7 +40,6 @@ def async_show_setup_message(entry_id, bridge_name, pincode, uri):
         f"### {pin}\n"
         f"![image](/api/homekit/pairingqr?{entry_id}-{pairing_secret})"
     )
-    print(message)
     return message
 
 

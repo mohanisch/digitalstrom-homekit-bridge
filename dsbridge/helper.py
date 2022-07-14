@@ -21,7 +21,7 @@ def write_config(path, data):
 
         cur_yaml.update(data)
         with open(path, 'w') as file:
-            yaml.safe_dump(cur_yaml, file)
+            yaml.safe_dump(cur_yaml, file, indent=2)
 
 
 def threaded(fn):

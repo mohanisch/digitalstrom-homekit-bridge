@@ -33,6 +33,8 @@ CHAR_BRIGHTNESS = "Brightness"
 CHAR_HUE = "Hue"
 CHAR_SATURATION = "Saturation"
 CHAR_COLOR_TEMPERATURE = "ColorTemperature"
+CHAR_ACTIVE = "Active"
+CHAR_NAME = "Name"
 
 ATTR_BRIGHTNESS = "brightness"
 ATTR_HUE = "hue"

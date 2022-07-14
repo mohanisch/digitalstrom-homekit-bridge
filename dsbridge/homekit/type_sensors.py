@@ -1,26 +1,20 @@
-from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_SENSOR
 
 from ..homekit import collector
-from ..homekit.accessories import TYPES
+from ..homekit.accessories import TYPES, DsAccessory
 
 
 @TYPES.register("TemperatureSensor")
-class TemperatureSensor(Accessory):
-    category = CATEGORY_SENSOR
+class TemperatureSensor(DsAccessory):
+    def __init__(self, *args):
+        super().__init__(*args, category=CATEGORY_SENSOR)
 
-    def __init__(self, *args, device=None):
-        super().__init__(*args)
-
-        self.chars = device['chars']
-        self.dsuid = device['dsuid']
-        self.entity_id = device['entity_id']
         self.temperature = 0
 
         serv_temp = self.add_preload_service('TemperatureSensor')
         self.char_temp = serv_temp.configure_char('CurrentTemperature')
 
-    @Accessory.run_at_interval(3)
+    @DsAccessory.run_at_interval(3)
     async def run(self):
         device_services = collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():
@@ -32,21 +26,16 @@ class TemperatureSensor(Accessory):
 
 
 @TYPES.register("HumiditySensor")
-class HumiditySensor(Accessory):
-    category = CATEGORY_SENSOR
+class HumiditySensor(DsAccessory):
+    def __init__(self, *args):
+        super().__init__(*args, category=CATEGORY_SENSOR)
 
-    def __init__(self, *args, device=None):
-        super().__init__(*args)
-
-        self.chars = device['chars']
-        self.dsuid = device['dsuid']
-        self.entity_id = device['entity_id']
         self.humidity = 80
 
         serv_temp = self.add_preload_service('HumiditySensor')
         self.char_temp = serv_temp.configure_char('CurrentRelativeHumidity')
 
-    @Accessory.run_at_interval(60)
+    @DsAccessory.run_at_interval(60)
     async def run(self):
         device_services = collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():
@@ -58,21 +47,16 @@ class HumiditySensor(Accessory):
 
 
 @TYPES.register("LightSensor")
-class LightSensor(Accessory):
-    category = CATEGORY_SENSOR
+class LightSensor(DsAccessory):
+    def __init__(self, *args):
+        super().__init__(*args, category=CATEGORY_SENSOR)
 
-    def __init__(self, *args, device=None):
-        super().__init__(*args)
-
-        self.chars = device['chars']
-        self.dsuid = device['dsuid']
-        self.entity_id = device['entity_id']
         self.brightness = 0
 
         serv_light = self.add_preload_service('LightSensor')
         self.char_lightlevel = serv_light.configure_char('CurrentAmbientLightLevel')
 
-    @Accessory.run_at_interval(60)
+    @DsAccessory.run_at_interval(60)
     async def run(self):
         device_services = collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():
@@ -84,21 +68,16 @@ class LightSensor(Accessory):
 
 
 @TYPES.register("MotionSensor")
-class MotionSensor(Accessory):
-    category = CATEGORY_SENSOR
+class MotionSensor(DsAccessory):
+    def __init__(self, *args):
+        super().__init__(*args, category=CATEGORY_SENSOR)
 
-    def __init__(self, *args, device=None):
-        super().__init__(*args)
-
-        self.chars = device['chars']
-        self.dsuid = device['dsuid']
-        self.entity_id = device['entity_id']
         self.motion = False
 
         serv_motion = self.add_preload_service('MotionSensor')
         self.char_motion = serv_motion.configure_char('MotionDetected')
 
-    @Accessory.run_at_interval(2)
+    @DsAccessory.run_at_interval(2)
     async def run(self):
         device_services = collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():

@@ -1,13 +1,15 @@
+from __future__ import annotations
+
 import logging
 import time
 from typing import Any, cast
 from uuid import UUID
 
 from pyhap.util import callback as pyhap_callback
-from pyhap.accessory import get_topic, Bridge
+from pyhap.accessory import Accessory, get_topic, Bridge
 from pyhap.accessory_driver import AccessoryDriver, _wrap_char_setter, _wrap_acc_setter, _wrap_service_setter
 from pyhap.const import HAP_REPR_AID, HAP_REPR_IID, HAP_REPR_PID, HAP_REPR_CHARS, HAP_SERVER_STATUS, \
-    HAP_PERMISSION_NOTIFY, HAP_REPR_VALUE, HAP_REPR_STATUS
+    HAP_PERMISSION_NOTIFY, HAP_REPR_VALUE, HAP_REPR_STATUS, CATEGORY_OTHER
 
 from .util import Registry, async_show_setup_message, async_dismiss_setup_message
 
@@ -17,13 +19,15 @@ logger = logging.getLogger(__name__)
 
 
 def get_accessory(driver, device, aid):
-    from . import type_lights, type_windowcover, type_sensors, type_switch
+    from . import type_lights, type_windowcover, type_sensors, type_switch, type_valve, type_speaker
     """Take state and return an accessory object if supported."""
     a_type = None
-    name = device['name']
 
-    if device['service'] == "alarm_control_panel":
-        a_type = "SecuritySystem"
+    if device['service'] == "sprinkler":
+        a_type = "Sprinkler"
+
+    if device['service'] == "audio":
+        a_type = "Speaker"
 
     elif device['service'] == "shades":
         a_type = "WindowCovering"
@@ -44,6 +48,7 @@ def get_accessory(driver, device, aid):
     elif device['service'] in (
             "automation",
             "button",
+            "switch",
             "input_boolean",
             "input_button",
             "remote",
@@ -55,8 +60,44 @@ def get_accessory(driver, device, aid):
     if a_type is None:
         return None
 
-    logging.info('Add "%s (%s)" as "%s"', name, device['dsuid'], a_type)
-    return TYPES[a_type](driver, name, aid, device=device)
+    logging.info('Add "%s (%s)" as "%s"', device['name'], device['entity_id'], a_type)
+    return TYPES[a_type](driver, device['name'], aid, device['entity_id'], device)
+
+
+class DsAccessory(Accessory):  # type: ignore[misc]
+    def __init__(
+        self,
+        driver: DsAccessoryDriver,
+        name: str,
+        aid: int,
+        entity_id: str,
+        config: dict,
+        *args: Any,
+        category: str = CATEGORY_OTHER,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize a Accessory object."""
+        super().__init__(
+            driver=driver,
+            display_name=name,
+            aid=aid
+        )
+        self.category = category
+
+        self.config = config
+        self.entity_id = entity_id
+        self.application = self.config['application']
+
+        if 'zoneid' in config:
+            self.zoneid = self.config['zoneid']
+        else:
+            self.zoneid = 0
+        if 'dsuid' in config:
+            self.dsuid = config['dsuid']
+        if 'chars' in config:
+            self.chars = config['chars']
+        if 'support' in config:
+            self.support = config['support']
 
 
 class DsAccessoryDriver(AccessoryDriver):

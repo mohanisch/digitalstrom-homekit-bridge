@@ -1,4 +1,4 @@
-hap-python~=4.4.0
+hap-python~=4.5.0
 setuptools==62.6.0
 PyQRCode~=1.2.1
 pyhap~=0.1.1

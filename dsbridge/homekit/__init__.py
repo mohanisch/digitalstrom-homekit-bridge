@@ -3,6 +3,8 @@ from __future__ import annotations
 import _thread
 import logging
 from collections.abc import Callable
+
+from .const import CONTROL, STATE_ON, STATE_OFF, STATE_UP, STATE_DOWN
 from .. import config
 
 from .accessories import get_accessory, DsAccessoryDriver, DsBridge
@@ -23,15 +25,15 @@ CALLBACK_TYPE = Callable[[], None]
 
 
 def add_devices():
-    dsdevices = collector.get_entities()
-
-    for dsdevice in dsdevices:
+    file = config.read_config_file()['entities']
+    for dsdevice in file:   # dsdevices:
         homekit.add_bridge_accessory(dsdevice)
 
 
 def start_homekit():
     def run_homekit():
         homekit.setup()
+        collector.gather_devices_status()
         add_devices()
         logging.info("Start homekit...")
         homekit.start()
@@ -39,16 +41,12 @@ def start_homekit():
     _thread.start_new_thread(run_homekit, ())
 
 
-STATE_ON = "on"
-STATE_OFF = "off"
-STATE_UP = "up"
-STATE_DOWN = "down"
-
-
 class EventDecider(object):
     def __init__(self):
         self.hap_events = None
         self.device_events = {}
+
+        self.ep = EventPatcher()
 
     def recieve_hap_event(self, events):
         _events = {}
@@ -56,27 +54,25 @@ class EventDecider(object):
             if 'ev' in event:
                 continue
             else:
-                dsuid = get_dsuid_by_aid(event['aid']).split('.')[0]
-                _events[dsuid] = {}
+                entity_id = get_entity_by_aid(event['aid'])
+                _events[entity_id] = {}
                 self.hap_events = list(dict.fromkeys(_events))
 
     def device_event(
-            self, dsuid: str,
+            self,
+            entity_id: str,
+            dsuid: str,
             zoneid: int,
             attributes: dict,
             application: str = ""
     ):
         _count_hap_events = len(self.hap_events)
         _count_device_events = 0
+        _test_action = None
 
-        if "brightness" in attributes:
-            _test_action = STATE_OFF if attributes['brightness'] == 0 else STATE_ON if attributes[
-                                                                                           'brightness'] == 100 else "dimm"
-        else:
-            _test_action = None
-
-        if dsuid in self.hap_events and _count_device_events <= _count_hap_events:
-            self.device_events[dsuid] = {
+        if entity_id in self.hap_events and _count_device_events <= _count_hap_events:
+            self.device_events[entity_id] = {
+                "dsuid": dsuid,
                 "zoneid": zoneid,
                 "attributes": attributes,
                 "application": application,
@@ -85,63 +81,70 @@ class EventDecider(object):
             _count_device_events = len(self.device_events)
 
         if _count_device_events == _count_hap_events:
+            _zone_ids, _applications = [], []
+            _event_type, _zoneid = "", ""
 
-            # if self._action('on'):
-            #     print("on", self._action('on'))
-            # if self._action('off'):
-            #     print("off", self._action('off'))
+            zone_devices = config.read_config_file()['zones']
+            zones = ({v['id']: v for v in zone_devices})
 
-            if self._action('dimm'):
-                for dsuid, value in self.device_events.items():
-                    EventPatcher().patch_device(
-                        dsuid, value['attributes']
-                    )
-            else:
-                for dsuid, value in self.device_events.items():
-                    _state, _actionid = self._zone_state(value, value['application'])
+            for k, v in self.device_events.items():
+                _zone_ids.append(v["zoneid"])
+            for k, v in self.device_events.items():
+                _applications.append(v["application"])
 
-                    if _state == "zone":
-                        EventPatcher().patch_zone(zoneid, value['application'], _actionid)
-                    if _state == "device":
-                        EventPatcher().patch_device(
-                            dsuid, value['attributes'], _actionid
-                        )
+            for zoneid in list(set(_zone_ids)):
+                for app in list(set(_applications)):
+                    _v = []
+                    _application = app
+
+                    if "scene" in CONTROL[_application]:
+                        _event_type, _zoneid = ("zone", zoneid) if all(
+                            elem in list(self.device_events.keys()) for elem in zones[zoneid]['applications'][_application]) else ("device", zoneid)
+                    else:
+                        _event_type = "manualState"
+
+                    if _event_type == "zone":
+                        for e, a in self.device_events.items():
+                            _value = a['attributes'][CONTROL[_application]['id']]
+                            if a['zoneid'] == _zoneid:
+                                if _application and a['application'] == _application:
+                                    _v.append(_value)
+                                    _v.sort()
+                        _zone_scene = True if _v[0] in (0, 100) else False
+                        if not _zone_scene:
+                            _event_type = "device"
+                        else:
+                            action = CONTROL[_application]['scene'][_v[0]]
+                            self.ep.patch_zone(zoneid, _application, action)
+
+                    if _event_type == "device":
+                        for e, a in self.device_events.items():
+                            if a['zoneid'] == _zoneid:
+                                if _application and a['application'] == _application:
+                                    if a['attributes'][CONTROL[_application]['id']] in (0, 100):
+                                        _value = a['attributes'][CONTROL[_application]['id']]
+                                        action = CONTROL[_application]['scene'][_value]
+                                        self.ep.patch_device_scenario(
+                                            a['dsuid'], a['attributes'], action
+                                        )
+                                    else:
+                                        self.ep.patch_device_status(
+                                            a['dsuid'], a['attributes']
+                                        )
+
+                    if _event_type == "manualState":
+                        for e, a in self.device_events.items():
+                            print(e, a)
+                            if _application and a['application'] == _application:
+                                self.ep.patch_switch(
+                                    a['dsuid'], a['attributes']
+                                )
+
 
             self.clean_events()
 
     def _action(self, action):
         return all(value['action'] == action for value in self.device_events.values())
-
-    def _zone_state(self, value, _application):  # TODO: func name muss angepasst werden
-        zone_devices = collector.get_zone(value['zoneid'])['devices']
-        _v = []
-        STATE_TRUE, STATE_FALSE = "", ""
-
-        _event_type = "zone" if all(elem in list(self.device_events.keys()) for elem in zone_devices[_application]) \
-                                and (len(list(self.device_events.keys())) > 1 ) else "device"
-
-        # TODO: Muss als constante hinterlegt werden, für jeden möglichen type
-        if value['application'] == 'lights':
-            self.varname = "brightness"
-            STATE_TRUE = STATE_ON
-            STATE_FALSE = STATE_OFF
-        if value['application'] == 'shades':
-            self.varname = "shadePositionOutside"
-            if _event_type == "device":
-                STATE_TRUE = STATE_ON
-                STATE_FALSE = STATE_OFF
-            else:
-                STATE_TRUE = STATE_UP
-                STATE_FALSE = STATE_DOWN
-
-        for e, a in self.device_events.items():
-            if a['application'] == _application:
-                _v.append(a['attributes'][self.varname])
-        _v.sort()
-
-        return \
-            _event_type, \
-            STATE_TRUE if _v[0] == 100 else STATE_FALSE
 
     def clean_events(self):
         self.hap_events = None
@@ -220,14 +223,14 @@ def get_aid_by_dsuid(dsuid: str):
     return aid
 
 
-def get_dsuid_by_aid(aid: int):
+def get_entity_by_aid(aid: int):
     """Returns dsuid by given aid"""
-    dsuid = None
+    entity_id = None
     allocations = homekit.aid_storage.allocations
 
     if aid in allocations.values():
-        dsuid = list(allocations.keys())[list(allocations.values()).index(aid)]
-    return dsuid
+        entity_id = list(allocations.keys())[list(allocations.values()).index(aid)]
+    return entity_id
 
 
 homekit = HomeKit(

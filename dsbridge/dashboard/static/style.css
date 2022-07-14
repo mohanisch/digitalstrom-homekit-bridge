@@ -130,7 +130,6 @@ h4 {
 .enhanced .radio-strip input {
     position: absolute;
     z-index: 1;
-    opacity: 0;
     outline: none;
 }
 

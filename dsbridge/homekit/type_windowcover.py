@@ -1,33 +1,19 @@
 """Class to hold all cover accessories."""
 import logging
-from pyhap.accessory import Accessory
 from pyhap.const import (
     CATEGORY_WINDOW_COVERING,
 )
 from . import event_decider
+from ..const import CHAR_NAME
 from ..homekit import collector
-from ..homekit.accessories import TYPES
+from ..homekit.accessories import TYPES, DsAccessory
 from ..helper import threaded
 
 
 @TYPES.register("WindowCovering")
-class WindowsCovering(Accessory):
-    """Generate a base Window Covering accessory for a cover entity.
-
-    This class is used for WindowCoveringBasic and
-    WindowCovering
-    """
-
-    category = CATEGORY_WINDOW_COVERING
-
-    def __init__(self, *args, device=None):
-        """Initialize a WindowsCovering accessory object."""
-        super().__init__(*args)
-
-        self.chars = device['chars']
-        self.dsuid = device['dsuid']
-        self.entity_id = device['entity_id']
-        self.zoneid = device['zoneid']
+class WindowsCovering(DsAccessory):
+    def __init__(self, *args):
+        super().__init__(*args, category=CATEGORY_WINDOW_COVERING)
 
         self._supports_stop = True
         self._supports_tilt = False
@@ -58,10 +44,6 @@ class WindowsCovering(Accessory):
                 'CurrentHorizontalTiltAngle', value=0
             )
 
-        self.char_name = self.serv_cover.configure_char(
-            'Name', value=device['name']
-        )
-
         self.char_current_position = self.serv_cover.configure_char(
             'CurrentPosition', 0)
         self.char_target_position = self.serv_cover.configure_char(
@@ -89,6 +71,7 @@ class WindowsCovering(Accessory):
         _attributes.update({'shadePositionOutside': self.char_target_position.value})
 
         event_decider.device_event(
+            self.entity_id,
             self.dsuid,
             self.zoneid,
             _attributes,
@@ -96,7 +79,7 @@ class WindowsCovering(Accessory):
         )
         self.char_target_position.set_value(value)
 
-    @Accessory.run_at_interval(3)
+    @DsAccessory.run_at_interval(3)
     async def run(self):
         device_services = collector.get_device_state(self.entity_id)
 

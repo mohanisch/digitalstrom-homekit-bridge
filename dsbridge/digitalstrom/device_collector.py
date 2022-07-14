@@ -23,7 +23,13 @@ class DssCollector(object):
 
         self.config_file = c()
 
-        self.requesthandler = DsRequest("https://" + args.hostname + ":" + args.http_port + "/", self.config_file['token'])
+        self.requesthandler = DsRequest("https://" + args.hostname + ":" + args.http_port + "/",
+                                        self.config_file['token'])
+
+        # TODO: irgwndwie blöd
+        self._function_blocks = self.collect_data("/functionBlocks")
+        self._submodules = self.collect_data("/submodules")
+        self._transform_zones()
 
     def collect_data(self, uri: str, api: str = SMART_HOME_API, params=None, key="data") -> list:
         if params is None:
@@ -33,33 +39,18 @@ class DssCollector(object):
         return _response
 
     def gather_devices_status(self):
-        devices_status_attributes = self.collect_data("/dsDevices/status")
-        zones_status = self.collect_data("/zones/status")
-        apartment_status = self.collect_data("/status")
+        apartment_status = self.collect_data("/status", params={"include": "dsDevices,zones,userDefinedStates"})
+
+        devices_status_attributes = apartment_status['included']['dsDevices']
+        zones_status = apartment_status['included']['zones']
         last_change = int(time.time())
 
-        _apartment_states = {}
         _user_defined_states = {}
         _measurements = {}
 
-        _dsuid = generate_dsuid(apartment_status['id'])
-
-        _absent_state = apartment_status['attributes']['access']['absent']
-        _entity_id = _dsuid + ".switch"
-        _apartment_states[_entity_id] = {
-            "state": "on" if _absent_state else "off",
-            "last_change": last_change
-        }
-
-        for measurement, value in apartment_status['attributes']['measurements'].items():
-            _service = measurement
-            _value = value
-            _entity_id = _dsuid + "." + _service
-            _apartment_states[_entity_id] = {
-                "states": {measurement: {"value": _value}},
-                "last_change": last_change
-            }
-        self._device_states.update(_apartment_states)
+        from .acc import apartment
+        apartment = apartment.Apartment(apartment_status['id'], apartment_status['attributes'])
+        self._device_states.update(apartment.gather_state(last_change))
 
         for device in devices_status_attributes:
             if "outputs" in device['attributes']['functionBlocks'][0]:
@@ -85,37 +76,32 @@ class DssCollector(object):
                 }}
                 self._device_states.update(d)
 
-        for device in self._transform_measurements():
-            _states = {}
-            zone_attributes = ({v['id']: v for v in zones_status}).get(device['zoneid'])['attributes']
-            _dsuid = generate_dsuid(device['dsuid'])
+        for device in zones_status:
+            if self.get_zone(device['id']) and 'attributes' in device and 'measurements' in device['attributes']:
+                _dsuid = generate_dsuid(device['id'])
+                _states = {}
+                zone_attributes = ({v['id']: v for v in zones_status}).get(device['id'])['attributes']
 
-            zone_measurements = zone_attributes['measurements']
-            for dsuid, value in zone_measurements.items():
-                _states[dsuid] = {
-                    "value": value,
-                }
-            _measurements = {device['entity_id']: {
-                "states": _states,
+                zone_measurements = zone_attributes['measurements']
+
+                for measurement, value in zone_measurements.items():
+                    entity_id = _dsuid + "." + measurement
+                    _states[measurement] = {
+                        "value": value,
+                    }
+                    _measurements = {entity_id: {
+                        "states": _states,
+                        "last_change": last_change
+                    }}
+                    self._device_states.update(_measurements)
+
+        user_defined_states = apartment_status['included']['userDefinedStates']
+        for user_state in user_defined_states:
+            _dsuid = generate_dsuid(user_state['id'])
+            _user_defined_states[_dsuid + ".manualState"] = {
+                "state": "on" if user_state['attributes']['status'] == "active" else "off",
                 "last_change": last_change
-            }}
-            self._device_states.update(_measurements)
-
-        ds = DsRequest("https://" + args.hostname + ":" + args.http_port + "/", self.config_file['token'])
-        params = {
-            "query": "/usr/addon-states/system-addon-user-defined-states/*(*)",
-            "token": ds.get_token()
-        }
-        user_defined_states = self.collect_data("/query", PROPERTY_API, params=params,
-                                                key="result")
-
-        for user_state in user_defined_states['system-addon-user-defined-states']:
-            _dsuid = generate_dsuid(user_state['name'])
-            if user_state['type'] == 'custom-states' and user_state['showOnPhone']:
-                _user_defined_states[_dsuid + ".manualState"] = {
-                    "state": "on" if user_state['state'] == "active" else "off",
-                    "last_change": last_change
-                }
+            }
             self._device_states.update(_user_defined_states)
         return self._device_states
 
@@ -123,24 +109,16 @@ class DssCollector(object):
         _device_state = self._device_states[entity_id]
         return _device_state
 
-    def get_entities(self, filter: bool = True):
+    def get_entities(self):
         self._devices = self.collect_data("/dsDevices")
         self._function_blocks = self.collect_data("/functionBlocks")
         self._user_defined_states = self.collect_data("/userDefinedStates")
         self._submodules = self.collect_data("/submodules")
 
-        self._transform_zones()
-        self._transform_measurements()
-        self._transform_output_devices()
-
         _devices = self._transform_output_devices() + \
                    self._transform_user_defined_states() + \
                    self._transform_measurements() + \
                    self._transform_apartment()
-        if filter:
-            self.gather_devices_status()
-            if "devices" in self.config_file and "include" in self.config_file["devices"]:
-                _devices = [x for x in _devices if x['entity_id'] in self.config_file["devices"]["include"]]
 
         return _devices
 
@@ -159,7 +137,6 @@ class DssCollector(object):
 
             if 'outputs' in function_attributes:
                 functions = {str(v['id']): v['attributes'] for v in function_attributes['outputs']}
-
                 if application == "lights":
                     if 'brightness' in functions:
                         device_support['brightness'] = True if functions['brightness']['mode'] == 'gradual' else False
@@ -173,10 +150,11 @@ class DssCollector(object):
                     else:
                         device_support['color'] = False
 
-                for chars in function_attributes['outputs']:
-                    if chars['id'] in ['shadePositionOutside']:
-                        device_chars = DEVICES_CHARS[application][chars['attributes']['mode']]
-                    device_mode = chars['attributes']['mode']
+                if application == "shades":
+                    for chars in function_attributes['outputs']:
+                        if chars['id'] in ['shadePositionOutside']:
+                            device_chars = DEVICES_CHARS[application][chars['attributes']['mode']]
+                        device_mode = chars['attributes']['mode']
 
                 zone = self.get_zone(device['attributes']['zone'])['name']
                 d = {
@@ -188,6 +166,7 @@ class DssCollector(object):
                     "zone": zone,
                     "chars": device_chars,
                     "mode": device_mode,
+                    "application": application,
                     "service": application,
                     "support": device_support,
                     "model": function_attributes['technicalName']
@@ -200,7 +179,6 @@ class DssCollector(object):
         _measurements = []
 
         for zone in zones_status:
-
             if self.get_zone(zone['id']) and 'attributes' in zone and 'measurements' in zone['attributes']:
                 zone_name = self.get_zone(zone['id'])['name']
 
@@ -214,6 +192,7 @@ class DssCollector(object):
                         "zone": zone_name,
                         "chars": [measurement.capitalize()],
                         "support": None,
+                        "application": measurement,
                         "service": 'sensor',
                     }
                     _measurements.append(m)
@@ -223,14 +202,13 @@ class DssCollector(object):
         _user_defined_states = []
 
         for user_defined_state in self._user_defined_states['userDefinedStates']:
-            if user_defined_state['type'] == 'manualState' and user_defined_state['attributes']['visibleForUsers']:
-                application = 'button'
-
+            if user_defined_state['attributes']['visibleForUsers']:
                 d = {
                     "entity_id": generate_dsuid(user_defined_state['id']) + "." + user_defined_state['type'],
                     "dsuid": user_defined_state['id'],
                     "name": user_defined_state['attributes']['name'],
-                    "service": application,
+                    "application": user_defined_state['type'],
+                    "service": user_defined_state['type'],
                     "chars": None,
                     "support": None,
                     "zone": "Benutzerdefinierte Zustände",
@@ -240,34 +218,10 @@ class DssCollector(object):
         return _user_defined_states
 
     def _transform_apartment(self):
-        _apartment_states = []
-        _apartment_data = []
-        _apartment_data = self.collect_data("/status")
-
-        _dsuid = generate_dsuid(_apartment_data['id'])
-        for measurement in _apartment_data['attributes']['measurements']:
-            d = {
-                "entity_id": _dsuid + "." + measurement,
-                "dsuid": _dsuid,
-                "name": "Apartment " + measurement.capitalize(),
-                "service": "sensor",
-                "chars": [measurement.capitalize()],
-                "support": None,
-                "zone": "Apartment"
-            }
-            _apartment_states.append(d)
-
-        d = {
-            "entity_id": _dsuid + ".switch",
-            "dsuid": _dsuid,
-            "name": "Abwesenheit",
-            "service": "button",
-            "chars": None,
-            "support": None,
-            "zone": "Apartment"
-        }
-        _apartment_states.append(d)
-        return _apartment_states
+        from .acc import apartment
+        data = self.collect_data("/status")
+        apartment = apartment.Apartment(data['id'], data['attributes'])
+        return apartment.get_entities()
 
     def _transform_zones(self):
         zones = []

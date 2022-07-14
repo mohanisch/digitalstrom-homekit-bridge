@@ -1,25 +1,21 @@
 import logging
 import time
 
-from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_SWITCH
 
 from ..const import CHAR_ON, STATE_ON
 from ..homekit import collector
-from ..homekit.accessories import TYPES
+from ..homekit.accessories import TYPES, DsAccessory
 from ..helper import threaded
 
 
 @TYPES.register("Switch")
-class Switch(Accessory):
+class Switch(DsAccessory):
     category = CATEGORY_SWITCH
 
-    def __init__(self, *args, device=None):
-        super().__init__(*args)
+    def __init__(self, *args):
+        super().__init__(*args, category=CATEGORY_SWITCH)
 
-        self.chars = device['chars']
-        self.dsuid = device['dsuid']
-        self.entity_id = device['entity_id']
         self.accessory_state = False
 
         self.states = collector.get_device_state(self.entity_id)
@@ -49,7 +45,7 @@ class Switch(Accessory):
             self.accessory_state
         )
 
-    @Accessory.run_at_interval(3)
+    @DsAccessory.run_at_interval(3)
     async def run(self):
 
         device_state = collector.get_device_state(self.entity_id)

@@ -1,10 +1,9 @@
 import logging
 import time
 
-from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_LIGHTBULB
 from ..homekit import collector
-from ..homekit.accessories import TYPES
+from ..homekit.accessories import TYPES, DsAccessory
 from ..helper import threaded
 
 from ..const import (
@@ -20,17 +19,10 @@ from . import event_decider
 
 
 @TYPES.register("Light")
-class Light(Accessory):
-    category = CATEGORY_LIGHTBULB
+class Light(DsAccessory):
+    def __init__(self, *args):
+        super().__init__(*args, category=CATEGORY_LIGHTBULB)
 
-    def __init__(self, *args, device=None):
-        super().__init__(*args)
-
-        self.chars = device['chars']
-        self.dsuid = device['dsuid']
-        self.entity_id = device['entity_id']
-        self.support = device['support']
-        self.zoneid = device['zoneid']
         self.accessory_state = 0
         self.brightness = 100
         self.saturation = None
@@ -104,6 +96,7 @@ class Light(Accessory):
         _attributes.update({'brightness': self.brightness})
 
         event_decider.device_event(
+            self.entity_id,
             self.dsuid,
             self.zoneid,
             _attributes,
@@ -168,7 +161,7 @@ class Light(Accessory):
         xy = converter.rgb_to_xy(rgb[0], rgb[1], rgb[2])
         return xy[0], xy[1]
 
-    @Accessory.run_at_interval(3)
+    @DsAccessory.run_at_interval(3)
     async def run(self):
         """Handle accessory driver started event."""
         device_services = collector.get_device_state(self.entity_id)

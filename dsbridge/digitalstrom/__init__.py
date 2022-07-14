@@ -10,8 +10,9 @@ class EventPatcher(object):
     def __init__(self):
         from ..config import args, read_config_file as config_file
         config_file = config_file()
-        from .request_handler import DsRequest                                                                              # TODO: Gefällt mir nicht
-        self.request_handler = DsRequest("https://" + args.hostname + ":" + args.http_port + "/", config_file['token'])     # TODO: Gefällt mir nicht
+        from .request_handler import DsRequest  # TODO: Gefällt mir nicht
+        self.request_handler = DsRequest("https://" + args.hostname + ":" + args.http_port + "/",
+                                         config_file['token'])  # TODO: Gefällt mir nicht
 
     @threaded
     def patch_zone(self, zoneid: int, application: str, actionid: str):
@@ -27,48 +28,48 @@ class EventPatcher(object):
         self.request_handler.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
 
     @threaded
-    def patch_device(self, dsuid: str, attributes: dict, actionid: str = ""):
-        def patch_device_scenario():
-            device_scenario = {
-                "context": "applicationDevice",
-                "actionId": actionid,
-                "dsDevice": dsuid
+    def patch_device_scenario(self, dsuid: str, attributes: dict, actionid: str = ""):
+        device_scenario = {
+            "context": "applicationDevice",
+            "actionId": actionid,
+            "dsDevice": dsuid
+        }
+        payload = json.dumps(device_scenario).encode("UTF-8")
+        logging.debug("(patch_device_scenarios) Payload: %s", payload)
+
+        self.request_handler.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
+
+    @threaded
+    def patch_device_status(self, dsuid: str, attributes: dict, actionid: str = ""):
+        device_attributes = []
+        for output_id, value in attributes.items():
+            _set_attributes = True
+            device_attribute = {
+                "op": "replace",
+                "path": "/functionBlocks/" + dsuid + "/outputs/" + output_id + "/value",
+                "value": str(value)
             }
-            payload = json.dumps(device_scenario).encode("UTF-8")
-            logging.debug("(patch_device_scenarios) Payload: %s", payload)
+            device_attributes.append(device_attribute)
 
-            self.request_handler.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
+        payload = json.dumps(device_attributes).encode("UTF-8")
+        logging.debug("(patch_device) Payload: %s", payload)
 
-        def patch_device_status():
-            device_attributes = []
-            for output_id, value in attributes.items():
-                _set_attributes = True
-                device_attribute = {
-                    "op": "replace",
-                    "path": "/functionBlocks/" + dsuid + "/outputs/" + output_id + "/value",
-                    "value": str(value)
-                }
-                device_attributes.append(device_attribute)
+        self.request_handler.patch(SMART_HOME_API + '/dsDevices/' + dsuid + '/status', data=payload)
 
-            payload = json.dumps(device_attributes).encode("UTF-8")
-            logging.debug("(patch_device) Payload: %s", payload)
-
-            self.request_handler.patch(SMART_HOME_API + '/dsDevices/' + dsuid + '/status', data=payload)
-
-        if (
-                (
-                        'brightness' in attributes and attributes['brightness'] in (100, 0)
-                        and 'colortemp' not in attributes
-                        and 'saturation' not in attributes
-                ) or
-                (
-                        'shadePositionOutside' in attributes
-                        and attributes['shadePositionOutside'] in (100, 0)
-                )
-        ):
-            patch_device_scenario()
-        else:
-            patch_device_status()
+        # if (
+        #         (
+        #                 'brightness' in attributes and attributes['brightness'] in (100, 0)
+        #                 and 'colortemp' not in attributes
+        #                 and 'saturation' not in attributes
+        #         ) or
+        #         (
+        #                 'shadePositionOutside' in attributes
+        #                 and attributes['shadePositionOutside'] in (100, 0)
+        #         )
+        # ):
+        #     patch_device_scenario()
+        # else:
+        #     patch_device_status()
 
     def patch_switch(self, switch_id: str, state: bool):
         switch_attributes = []
@@ -81,7 +82,7 @@ class EventPatcher(object):
             payload = json.dumps(switch_scenario).encode("UTF-8")
             logging.debug("(patch_switch) Payload: %s", payload)
 
-            self.request_handler.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
+            #self.request_handler.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
         else:
             switch_attribute = {
                 "op": "replace",
@@ -90,6 +91,6 @@ class EventPatcher(object):
             }
             switch_attributes.append(switch_attribute)
             payload = json.dumps(switch_attributes).encode("UTF-8")
-            logging.debug("Payload: %s", payload)
+            logging.debug("(patch_switch) Payload: %s", payload)
 
             self.request_handler.patch(SMART_HOME_API + '/userDefinedStates/' + switch_id + '/status', data=payload)

@@ -1,3 +1,4 @@
+import json
 from io import BytesIO
 
 import base36
@@ -7,7 +8,6 @@ from waitress import serve
 
 from .. import config
 from ..helper import write_config
-
 
 http = Flask(__name__)
 http.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
@@ -21,8 +21,7 @@ def main():
     if 'token' not in c:
         return redirect("/onboarding/start", code=302)
     else:
-        from ..digitalstrom.device_collector import DssCollector
-        entities = DssCollector().get_entities()
+        entities = config.read_config_file()['entities']
         res = {}
         for item in entities:
             res.setdefault(item['zone'], []).append(item)
@@ -41,12 +40,36 @@ def homekit_state():
     return str(state.paired)
 
 
-@http.route("/save-devices", methods=['GET', 'POST'])
+@http.route("/save-devices", methods=['POST'])
 def save_devices():
-    data = {"devices": {"include": request.form.getlist('devices')}}
+    request_data = request.get_json()
+
+    devices = request_data['devices']
+    devices_subapplication = request_data['device_subapplication']
+
+    from ..digitalstrom.device_collector import DssCollector
+    entities = DssCollector().get_entities()
+
+    device_obj = []
+    for device in devices:
+        d = ({v['entity_id']: v for v in entities}).get(device)
+        if devices_subapplication.get(device):
+            d['service'] = devices_subapplication.get(device)
+        device_obj.append(d)
+
+    zoneids = list(set([i['zoneid'] for i in device_obj if 'zoneid' in i]))
+
+    zone_obj = []
+    for zoneid in zoneids:
+        zone_devices = DssCollector().get_zone(zoneid)['devices']
+        z = {
+            "id": zoneid,
+            "applications": zone_devices
+        }
+        zone_obj.append(z)
 
     from ..helper import write_config
-    write_config(config.args.config_path + '/config.yml', data)
+    write_config(config.args.config_path + '/config.yml', {'entities': device_obj, 'zones': zone_obj})
 
     return {"ok": True}
 
@@ -91,7 +114,7 @@ def onboarding(step):
         )
     if step == 'devices':
         from ..digitalstrom.device_collector import DssCollector
-        entities = DssCollector().get_entities(filter=False)
+        entities = DssCollector().get_entities()
 
         res = {}
         for item in entities:
@@ -121,10 +144,6 @@ def onboarding(step):
         )
 
 
-def run_server():
-    serve(http, host="0.0.0.0", port=8081)
-
-
 def xhm_uri(pincode, setup_id):
     """Generates the X-HM:// uri (Setup Code URI)
 
@@ -151,3 +170,6 @@ def xhm_uri(pincode, setup_id):
     encoded_payload = encoded_payload.rjust(9, "0")
 
     return "X-HM://" + encoded_payload + setup_id
+
+def run_server():
+    serve(http, host="0.0.0.0", port=8081)
