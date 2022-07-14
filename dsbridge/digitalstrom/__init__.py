@@ -28,7 +28,7 @@ class EventPatcher(object):
         self.request_handler.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
 
     @threaded
-    def patch_device_scenario(self, dsuid: str, attributes: dict, actionid: str = ""):
+    def patch_device_scenario(self, dsuid: str, actionid: str = ""):
         device_scenario = {
             "context": "applicationDevice",
             "actionId": actionid,
@@ -40,7 +40,7 @@ class EventPatcher(object):
         self.request_handler.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
 
     @threaded
-    def patch_device_status(self, dsuid: str, attributes: dict, actionid: str = ""):
+    def patch_device_status(self, dsuid: str, attributes: dict):
         device_attributes = []
         for output_id, value in attributes.items():
             _set_attributes = True
@@ -56,21 +56,6 @@ class EventPatcher(object):
 
         self.request_handler.patch(SMART_HOME_API + '/dsDevices/' + dsuid + '/status', data=payload)
 
-        # if (
-        #         (
-        #                 'brightness' in attributes and attributes['brightness'] in (100, 0)
-        #                 and 'colortemp' not in attributes
-        #                 and 'saturation' not in attributes
-        #         ) or
-        #         (
-        #                 'shadePositionOutside' in attributes
-        #                 and attributes['shadePositionOutside'] in (100, 0)
-        #         )
-        # ):
-        #     patch_device_scenario()
-        # else:
-        #     patch_device_status()
-
     def patch_switch(self, switch_id: str, state: bool):
         switch_attributes = []
         if switch_id in ('apartmentAbsents', 'dummy'):
@@ -82,7 +67,7 @@ class EventPatcher(object):
             payload = json.dumps(switch_scenario).encode("UTF-8")
             logging.debug("(patch_switch) Payload: %s", payload)
 
-            #self.request_handler.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
+            self.request_handler.post(SMART_HOME_API + '/scenarios/invoke', data=payload)
         else:
             switch_attribute = {
                 "op": "replace",

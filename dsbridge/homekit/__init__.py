@@ -97,7 +97,7 @@ class EventDecider(object):
                     _v = []
                     _application = app
 
-                    if "scene" in CONTROL[_application]:
+                    if _application in CONTROL and "scene" in CONTROL[_application]:
                         _event_type, _zoneid = ("zone", zoneid) if all(
                             elem in list(self.device_events.keys()) for elem in zones[zoneid]['applications'][_application]) else ("device", zoneid)
                     else:
@@ -125,7 +125,7 @@ class EventDecider(object):
                                         _value = a['attributes'][CONTROL[_application]['id']]
                                         action = CONTROL[_application]['scene'][_value]
                                         self.ep.patch_device_scenario(
-                                            a['dsuid'], a['attributes'], action
+                                            a['dsuid'], action
                                         )
                                     else:
                                         self.ep.patch_device_status(
