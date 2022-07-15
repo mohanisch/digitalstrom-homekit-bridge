@@ -25,8 +25,8 @@ CALLBACK_TYPE = Callable[[], None]
 
 
 def add_devices():
-    file = config.read_config_file()['entities']
-    for dsdevice in file:   # dsdevices:
+    file = config.read_config_file()
+    for dsdevice in file['entities']:
         homekit.add_bridge_accessory(dsdevice)
 
 

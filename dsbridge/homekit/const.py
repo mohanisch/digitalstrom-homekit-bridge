@@ -18,12 +18,12 @@ CONTROL = {
     "shades": {
         "id": "shadePositionOutside",
         "device": {
-            0: STATE_OFF,
-            100: STATE_ON
-        },
-        "scene": {
             0: STATE_DOWN,
             100: STATE_UP
+        },
+        "scene": {
+            0: STATE_OFF,
+            100: STATE_ON
         }
     },
 }

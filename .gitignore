@@ -5,3 +5,5 @@ __pycache__/
 .idea/
 venv/
 *.state
+config.yml
+playground.py
