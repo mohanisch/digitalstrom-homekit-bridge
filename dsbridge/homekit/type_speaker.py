@@ -25,7 +25,14 @@ class Speaker(DsAccessory):
 
         self.accessory_state = False
 
-        self.states = collector.get_device_state(self.entity_id)
+        #self.states = collector.get_device_state(self.entity_id)
+
+        self.set_info_service(
+            manufacturer='HaPK',
+            model='Raspberry Pi',
+            firmware_revision='1.0',
+            serial_number='1'
+        )
 
         tv_service = self.add_preload_service(
             'Television', ['Name',
@@ -39,59 +46,59 @@ class Speaker(DsAccessory):
             'Active', value=0,
             setter_callback=self._on_active_changed,
         )
-        tv_service.configure_char(
-            'ActiveIdentifier', value=1,
-            setter_callback=self._on_active_identifier_changed,
-        )
-        tv_service.configure_char(
-            'RemoteKey', setter_callback=self._on_remote_key,
-        )
-        tv_service.configure_char('Name', value=self.display_name)
-        # TODO: implement persistence for ConfiguredName
-        tv_service.configure_char('ConfiguredName', value=self.display_name)
-        tv_service.configure_char('SleepDiscoveryMode', value=1)
-
-        for idx, (source_name, source_type) in enumerate(self.SOURCES.items()):
-            input_source = self.add_preload_service('InputSource', ['Name', 'Identifier'])
-            input_source.configure_char('Name', value=source_name)
-            input_source.configure_char('Identifier', value=idx + 1)
-            # TODO: implement persistence for ConfiguredName
-            input_source.configure_char('ConfiguredName', value=source_name)
-            input_source.configure_char('InputSourceType', value=source_type)
-            input_source.configure_char('IsConfigured', value=1)
-            input_source.configure_char('CurrentVisibilityState', value=0)
-
-            tv_service.add_linked_service(input_source)
-
-        tv_speaker_service = self.add_preload_service(
-            'TelevisionSpeaker', ['Active',
-                                  'VolumeControlType',
-                                  'VolumeSelector', 'Mute']
-        )
-        tv_speaker_service.configure_char('Active', value=1)
-        # Set relative volume control
-        tv_speaker_service.configure_char('VolumeControlType', value=1)
-        tv_speaker_service.configure_char(
-            'Mute', setter_callback=self._on_mute,
-        )
-        tv_speaker_service.configure_char(
-            'VolumeSelector', setter_callback=self._on_volume_selector,
-        )
-
-    def _on_active_changed(self, value):
-        print('Turn %s' % ('on' if value else 'off'))
-
-    def _on_active_identifier_changed(self, value):
-        print('Change input to %s' % list(self.SOURCES.keys())[value - 1])
-
-    def _on_remote_key(self, value):
-        print('Remote key %d pressed' % value)
-
-    def _on_mute(self, value):
-        print('Mute' if value else 'Unmute')
-
-    def _on_volume_selector(self, value):
-        print('%screase volume' % ('In' if value == 0 else 'De'))
+    #     tv_service.configure_char(
+    #         'ActiveIdentifier', value=1,
+    #         setter_callback=self._on_active_identifier_changed,
+    #     )
+    #     tv_service.configure_char(
+    #         'RemoteKey', setter_callback=self._on_remote_key,
+    #     )
+    #     tv_service.configure_char('Name', value=self.display_name)
+    #     # TODO: implement persistence for ConfiguredName
+    #     tv_service.configure_char('ConfiguredName', value=self.display_name)
+    #     tv_service.configure_char('SleepDiscoveryMode', value=1)
+    #
+    #     for idx, (source_name, source_type) in enumerate(self.SOURCES.items()):
+    #         input_source = self.add_preload_service('InputSource', ['Name', 'Identifier'])
+    #         input_source.configure_char('Name', value=source_name)
+    #         input_source.configure_char('Identifier', value=idx + 1)
+    #         # TODO: implement persistence for ConfiguredName
+    #         input_source.configure_char('ConfiguredName', value=source_name)
+    #         input_source.configure_char('InputSourceType', value=source_type)
+    #         input_source.configure_char('IsConfigured', value=1)
+    #         input_source.configure_char('CurrentVisibilityState', value=0)
+    #
+    #         tv_service.add_linked_service(input_source)
+    #
+    #     tv_speaker_service = self.add_preload_service(
+    #         'TelevisionSpeaker', ['Active',
+    #                               'VolumeControlType',
+    #                               'VolumeSelector', 'Mute']
+    #     )
+    #     tv_speaker_service.configure_char('Active', value=1)
+    #     # Set relative volume control
+    #     tv_speaker_service.configure_char('VolumeControlType', value=1)
+    #     tv_speaker_service.configure_char(
+    #         'Mute', setter_callback=self._on_mute,
+    #     )
+    #     tv_speaker_service.configure_char(
+    #         'VolumeSelector', setter_callback=self._on_volume_selector,
+    #     )
+    #
+    # def _on_active_changed(self, value):
+    #     print('Turn %s' % ('on' if value else 'off'))
+    #
+    # def _on_active_identifier_changed(self, value):
+    #     print('Change input to %s' % list(self.SOURCES.keys())[value - 1])
+    #
+    # def _on_remote_key(self, value):
+    #     print('Remote key %d pressed' % value)
+    #
+    # def _on_mute(self, value):
+    #     print('Mute' if value else 'Unmute')
+    #
+    # def _on_volume_selector(self, value):
+    #     print('%screase volume' % ('In' if value == 0 else 'De'))
     #
     # @threaded
     # def _set_chars(self, char_values):

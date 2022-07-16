@@ -72,7 +72,7 @@ class EventPatcher(object):
             switch_attribute = {
                 "op": "replace",
                 "path": "/status",
-                "value": "active" if state else "inactive"
+                "value": state
             }
             switch_attributes.append(switch_attribute)
             payload = json.dumps(switch_attributes).encode("UTF-8")

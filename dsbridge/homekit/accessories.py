@@ -64,7 +64,7 @@ def get_accessory(driver, device, aid):
     return TYPES[a_type](driver, device['name'], aid, device['entity_id'], device)
 
 
-class DsAccessory(Accessory):  # type: ignore[misc]
+class DsAccessory(Accessory):
     def __init__(
         self,
         driver: DsAccessoryDriver,

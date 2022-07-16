@@ -82,7 +82,7 @@ class EventDecider(object):
 
         if _count_device_events == _count_hap_events:
             _zone_ids, _applications = [], []
-            _event_type, _zoneid = "", ""
+            _event_type = "device"
 
             zone_devices = config.read_config_file()['zones']
             zones = ({v['id']: v for v in zone_devices})
@@ -97,16 +97,15 @@ class EventDecider(object):
                     _v = []
                     _application = app
 
-                    if _application in CONTROL and "scene" in CONTROL[_application]:
-                        _event_type, _zoneid = ("zone", zoneid) if all(
-                            elem in list(self.device_events.keys()) for elem in zones[zoneid]['applications'][_application]) else ("device", zoneid)
-                    else:
-                        _event_type = "manualState"
+                    if _application in CONTROL and "zone_scene" in CONTROL[_application]:
+                        _event_type = "zone" if all(
+                            elem in list(self.device_events.keys()) for elem in
+                            zones[zoneid]['applications'][_application]) else "device"
 
                     if _event_type == "zone":
                         for e, a in self.device_events.items():
                             _value = a['attributes'][CONTROL[_application]['id']]
-                            if a['zoneid'] == _zoneid:
+                            if a['zoneid'] == zoneid:
                                 if _application and a['application'] == _application:
                                     _v.append(_value)
                                     _v.sort()
@@ -114,32 +113,30 @@ class EventDecider(object):
                         if not _zone_scene:
                             _event_type = "device"
                         else:
-                            action = CONTROL[_application]['scene'][_v[0]]
+                            action = CONTROL[_application]['zone_scene'][_v[0]]
                             self.ep.patch_zone(zoneid, _application, action)
 
                     if _event_type == "device":
                         for e, a in self.device_events.items():
-                            if a['zoneid'] == _zoneid:
+                            if a['application'] == "manualState":
                                 if _application and a['application'] == _application:
-                                    if a['attributes'][CONTROL[_application]['id']] in (0, 100):
-                                        _value = a['attributes'][CONTROL[_application]['id']]
-                                        action = CONTROL[_application]['scene'][_value]
-                                        self.ep.patch_device_scenario(
-                                            a['dsuid'], action
-                                        )
-                                    else:
-                                        self.ep.patch_device_status(
-                                            a['dsuid'], a['attributes']
-                                        )
-
-                    if _event_type == "manualState":
-                        for e, a in self.device_events.items():
-                            print(e, a)
-                            if _application and a['application'] == _application:
-                                self.ep.patch_switch(
-                                    a['dsuid'], a['attributes']
-                                )
-
+                                    _value = a['attributes'][CONTROL[_application]['id']]
+                                    self.ep.patch_switch(
+                                        a['dsuid'], CONTROL[_application]['device'][_value]
+                                    )
+                            else:
+                                if a['zoneid'] == zoneid:
+                                    if _application and a['application'] == _application:
+                                        if a['attributes'][CONTROL[_application]['id']] in (0, 100):
+                                            _value = a['attributes'][CONTROL[_application]['id']]
+                                            action = CONTROL[_application]['device_scene'][_value]
+                                            self.ep.patch_device_scenario(
+                                                a['dsuid'], action
+                                            )
+                                        else:
+                                            self.ep.patch_device_status(
+                                                a['dsuid'], a['attributes']
+                                            )
 
             self.clean_events()
 
