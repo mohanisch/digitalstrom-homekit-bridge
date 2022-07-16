@@ -12,6 +12,7 @@ from pyhap.const import HAP_REPR_AID, HAP_REPR_IID, HAP_REPR_PID, HAP_REPR_CHARS
     HAP_PERMISSION_NOTIFY, HAP_REPR_VALUE, HAP_REPR_STATUS, CATEGORY_OTHER
 
 from .util import Registry, async_show_setup_message, async_dismiss_setup_message
+from ..const import BRIDGE_SERIAL_NUMBER, BRIDGE_NAME, MANUFACTURER
 
 TYPES = Registry()
 
@@ -255,6 +256,12 @@ class DsBridge(Bridge):
             self, driver: DsAccessoryDriver, name: str
     ):
         super().__init__(driver, name)
+        self.set_info_service(
+            model=BRIDGE_NAME,
+            manufacturer=MANUFACTURER,
+            firmware_revision=BRIDGE_SERIAL_NUMBER,
+            serial_number=BRIDGE_SERIAL_NUMBER,
+        )
 
     def setup_message(self) -> None:
         """Avoid that the Pyhap setup message appears on the terminal"""
