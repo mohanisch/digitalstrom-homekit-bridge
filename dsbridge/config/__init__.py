@@ -1,7 +1,11 @@
 import argparse
+import os
+
 import yaml
 from ..const import RESTART_EXIT_CODE
 
+ENV_PERSIST_FILE_PATH = os.environ.get('PERSIST_FILE_PATH')
+DEFAULT_DATA_PATH = ENV_PERSIST_FILE_PATH if ENV_PERSIST_FILE_PATH else '/tmp'
 
 def get_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -9,7 +13,7 @@ def get_arguments() -> argparse.Namespace:
         epilog=f"If restart is requested, exits with code {RESTART_EXIT_CODE}",
     )
     parser.add_argument(
-        "--hostname", help="Hostname or ip-address of digitalStrom server", default="dss.local"
+        "--hostname", help="Hostname or ip-address of digitalStrom server", default=os.environ.get('HOSTNAME')
     )
     parser.add_argument(
         "--http-port", help="Port to reach digitalStrom http server, default 8080", default="8080"
@@ -24,7 +28,7 @@ def get_arguments() -> argparse.Namespace:
         "--persit-file-name", help="Name for persist file, default is 'home.state'", default="home.state"
     )
     parser.add_argument(
-        "--persit-file-path", help="Path to persist file, default is '/tmp'", default="/tmp"
+        "--persit-file-path", help="Path to persist file, default is '/tmp'", default=DEFAULT_DATA_PATH
     )
     parser.add_argument(
         "--loglevel", help="Loglevel: INFO, DEBUG", default="INFO"
@@ -34,7 +38,7 @@ def get_arguments() -> argparse.Namespace:
     )
     required_named = parser.add_argument_group('required named arguments')
     required_named.add_argument(
-        "--config-path", help="Path to config.yml", default="", required=True
+        "--config-path", help="Path to config.yml", default=os.environ.get('CONFIG_PATH'), required=True
     )
     arguments = parser.parse_args()
 
