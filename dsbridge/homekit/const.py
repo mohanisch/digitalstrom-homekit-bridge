@@ -23,12 +23,12 @@ CONTROL = {
     "shades": {
         "id": "shadePositionOutside",
         "device_scene": {
-            0: STATE_DOWN,
-            100: STATE_UP
-        },
-        "zone_scene": {
             0: STATE_OFF,
             100: STATE_ON
+        },
+        "zone_scene": {
+            0: STATE_DOWN,
+            100: STATE_UP
         }
     },
     "absent": {
