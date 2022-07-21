@@ -4,7 +4,7 @@ import time
 from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_SPEAKER
 
-from ..const import CHAR_ON, STATE_ON, CHAR_ACTIVE, CHAR_NAME
+from .const import CHAR_ON, STATE_ON, CHAR_ACTIVE, CHAR_NAME
 from ..homekit import collector
 from ..homekit.accessories import TYPES, DsAccessory
 from ..helper import threaded

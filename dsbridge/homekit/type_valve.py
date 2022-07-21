@@ -4,7 +4,8 @@ import time
 from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_SPRINKLER
 
-from ..const import CHAR_ON, STATE_ON, CHAR_ACTIVE, CHAR_NAME
+from .const import STATE_ON, CHAR_ACTIVE, CHAR_VALVE_TYPE, CHAR_INUSE, CHAR_REMAIN_DURATION, \
+    CHAR_SET_DURATION
 from ..homekit import collector
 from ..homekit.accessories import TYPES, DsAccessory
 from ..helper import threaded
@@ -21,7 +22,8 @@ class Sprinkler(DsAccessory):
 
         self.states = collector.get_device_state(self.entity_id)
 
-        self.serv_sprinkler = self.add_preload_service('Valve')
+        self.serv_sprinkler = self.add_preload_service(
+            'Valve', [CHAR_ACTIVE, CHAR_VALVE_TYPE, CHAR_INUSE, CHAR_REMAIN_DURATION, CHAR_SET_DURATION])
         self.char_active = self.serv_sprinkler.configure_char(
             CHAR_ACTIVE, value=0,
         )
@@ -31,6 +33,12 @@ class Sprinkler(DsAccessory):
         self.char_inuse = self.serv_sprinkler.configure_char(
             "InUse", value=0,
         )
+        self.char_remaining_duration = self.serv_sprinkler.configure_char(
+            "RemainingDuration", value=60,
+        )
+        self.char_set_duration = self.serv_sprinkler.configure_char(
+            "SetDuration", value=60,
+        )
 
         self.serv_sprinkler.setter_callback = self._set_chars
 
@@ -39,6 +47,8 @@ class Sprinkler(DsAccessory):
         logging.debug("Valve _set_chars: %s", char_values)
         _attributes = {}
 
+        print(self.char_remaining_duration.value)
+
         if self.char_active.value == 0:
             self.accessory_state = False
             self.char_inuse.set_value(0)
@@ -46,16 +56,17 @@ class Sprinkler(DsAccessory):
             self.char_inuse.set_value(1)
             self.accessory_state = True
 
-        _attributes.update({'active': char_values['Active']})
+        if CHAR_ACTIVE in char_values:
+            _attributes.update({'active': char_values[CHAR_ACTIVE]})
 
-        # TODO: Muss anders funktionieren
-        event_decider.device_event(
-            self.entity_id,
-            self.dsuid,
-            self.zoneid,
-            _attributes,
-            self.application
-        )
+        # if len(_attributes):
+        #     event_decider.device_event(
+        #         self.entity_id,
+        #         self.dsuid,
+        #         self.zoneid,
+        #         _attributes,
+        #         self.application
+        #     )
 
     @Accessory.run_at_interval(3)
     async def run(self):

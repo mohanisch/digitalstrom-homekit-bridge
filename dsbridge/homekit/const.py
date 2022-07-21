@@ -7,6 +7,25 @@ STATE_INACTIVE = "inactive"
 STATE_PRESENT = "present"
 STATE_ABSENT = "absent"
 
+CHAR_ON = "On"
+CHAR_BRIGHTNESS = "Brightness"
+CHAR_HUE = "Hue"
+CHAR_SATURATION = "Saturation"
+CHAR_COLOR_TEMPERATURE = "ColorTemperature"
+CHAR_ACTIVE = "Active"
+CHAR_NAME = "Name"
+CHAR_VALVE_TYPE = "ValveType"
+CHAR_INUSE = "InUse"
+CHAR_REMAIN_DURATION = "RemainingDuration"
+CHAR_SET_DURATION = "SetDuration"
+
+
+ATTR_BRIGHTNESS = "brightness"
+ATTR_HUE = "hue"
+ATTR_COLOR_TEMP = "color_temp"
+ATTR_HS_COLOR = "hs_color"
+ATTR_COLOR_MODE = "color_mode"
+COLOR_MODE_WHITE = "white"
 
 CONTROL = {
     "lights": {
