@@ -11,7 +11,7 @@ from pyhap.accessory_driver import AccessoryDriver, _wrap_char_setter, _wrap_acc
 from pyhap.const import HAP_REPR_AID, HAP_REPR_IID, HAP_REPR_PID, HAP_REPR_CHARS, HAP_SERVER_STATUS, \
     HAP_PERMISSION_NOTIFY, HAP_REPR_VALUE, HAP_REPR_STATUS, CATEGORY_OTHER
 
-from .util import Registry, async_show_setup_message, async_dismiss_setup_message
+from .util import Registry, async_show_setup_message, async_suppress_setup_message
 from ..const import BRIDGE_SERIAL_NUMBER, BRIDGE_NAME, MANUFACTURER
 
 TYPES = Registry()
@@ -231,8 +231,7 @@ class DsAccessoryDriver(AccessoryDriver):
         """Override super function to dismiss setup message if paired."""
         success = super().pair(client_uuid, client_public, client_permissions)
         if success:
-            print("success")
-            async_dismiss_setup_message("self._entry_id")
+            async_suppress_setup_message()
         return cast(bool, success)
 
     @pyhap_callback

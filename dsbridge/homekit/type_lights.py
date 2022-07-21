@@ -6,7 +6,7 @@ from ..homekit import collector
 from ..homekit.accessories import TYPES, DsAccessory
 from ..helper import threaded
 
-from ..const import (
+from .const import (
     STATE_ON,
     CHAR_ON,
     CHAR_BRIGHTNESS,

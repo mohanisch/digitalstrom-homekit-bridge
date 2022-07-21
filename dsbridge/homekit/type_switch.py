@@ -3,10 +3,11 @@ import time
 
 from pyhap.const import CATEGORY_SWITCH
 
-from ..const import CHAR_ON, STATE_ON
+from .const import CHAR_ON, STATE_ON
 from ..homekit import collector
 from ..homekit.accessories import TYPES, DsAccessory
 from ..helper import threaded
+from . import event_decider
 
 
 @TYPES.register("Switch")
@@ -23,7 +24,6 @@ class Switch(DsAccessory):
         serv_switch = self.add_preload_service('Switch')
         self.char_on = serv_switch.configure_char(
             CHAR_ON, value=False,
-            # setter_callback=self.set_state
         )
 
         serv_switch.setter_callback = self._set_chars
@@ -32,17 +32,21 @@ class Switch(DsAccessory):
     @threaded
     def _set_chars(self, char_values):
         logging.debug("Switch _set_chars: %s", char_values)
+        _attributes = {}
 
         if self.char_on.value == 0:
             self.accessory_state = False
         else:
             self.accessory_state = True
 
-        # TODO: Muss anders funktionieren
-        from .. import digitalstrom
-        digitalstrom.EventPatcher().patch_switch(
+        _attributes.update({'active': char_values[CHAR_ON]})
+
+        event_decider.device_event(
+            self.entity_id,
             self.dsuid,
-            self.accessory_state
+            self.zoneid,
+            _attributes,
+            self.application
         )
 
     @DsAccessory.run_at_interval(3)

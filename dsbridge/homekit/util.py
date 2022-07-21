@@ -43,6 +43,5 @@ def async_show_setup_message(entry_id, bridge_name, pincode, uri):
     return message
 
 
-def async_dismiss_setup_message(entry_id: str) -> None:
-    """Dismiss persistent notification and remove QR code."""
-    print("persistent_notification.async_dismiss(hass, entry_id)", entry_id)
+def async_suppress_setup_message() -> None:
+    """Underline the notice and remove the QR code."""

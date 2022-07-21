@@ -2,7 +2,7 @@ from typing import Final
 
 MAJOR_VERSION: Final = "2"
 MINOR_VERSION: Final = "0"
-PATCH_VERSION: Final = "5"
+PATCH_VERSION: Final = "6"
 __short_version__: Final = f"{MAJOR_VERSION}.{MINOR_VERSION}"
 __version__: Final = f"{__short_version__}.{PATCH_VERSION}"
 
@@ -13,29 +13,4 @@ BRIDGE_NAME = "digitalStrom Homekit Bridge"
 BRIDGE_SERIAL_NUMBER = __version__
 MANUFACTURER = "Marco Hanisch"
 
-ATTR_MANUFACTURER = None
-ATTR_INTEGRATION = None
-ATTR_MODEL = None
 
-CONF_NAME: Final = "name"
-
-DOMAIN = "dsbridge"
-HOMEKIT_FILE = ".homekit.state"
-HOMEKIT_PAIRING_QR = "dsbridge-pairing-qr"
-HOMEKIT_PAIRING_QR_SECRET = "dsbridge-pairing-qr-secret"
-
-STATE_ON = "on"
-CHAR_ON = "On"
-CHAR_BRIGHTNESS = "Brightness"
-CHAR_HUE = "Hue"
-CHAR_SATURATION = "Saturation"
-CHAR_COLOR_TEMPERATURE = "ColorTemperature"
-CHAR_ACTIVE = "Active"
-CHAR_NAME = "Name"
-
-ATTR_BRIGHTNESS = "brightness"
-ATTR_HUE = "hue"
-ATTR_COLOR_TEMP = "color_temp"
-ATTR_HS_COLOR = "hs_color"
-ATTR_COLOR_MODE = "color_mode"
-COLOR_MODE_WHITE = "white"
