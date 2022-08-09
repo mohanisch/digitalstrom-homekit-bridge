@@ -1,11 +1,38 @@
-DS_DEVICES = {
-    "GE-KL200": {},
-    "GE-KM200": {},
-    "GE-SDM200": {},
-    "GE-SDS200-CW": {},
-    "GE-TKM210": {},
-    "GE-TKM230": {},
-    "GR-KL200": {},
+from dsbridge.homekit.const import *
+
+DEVICE_SUPPORT = {
+    "GE-KL200": {
+        "application": "lights",
+        "support": ['on']
+    },
+    "GE-KM200": {
+        "application": "lights",
+        "support": ['on']
+    },
+    "GE-SDM200": {
+        "application": "lights",
+        "support": ['on', 'brightness']
+    },
+    "GE-SDS200-CW": {
+        "application": "lights",
+        "support": ['on', 'brightness']
+    },
+    "GE-TKM210": {
+        "application": "lights",
+        "support": ['on', 'brightness']
+    },
+    "GE-TKM230": {
+        "application": "lights",
+        "support": ['on', 'brightness']
+    },
+    "Extended color light: LCA001": {
+        "application": "lights",
+        "support": ['on', 'brightness', CHAR_HUE, CHAR_SATURATION, CHAR_COLOR_TEMPERATURE]
+    },
+    "GR-KL200": {
+        "application": "shades",
+        "support": [CHAR_HOLD_POSITION, CHAR_CURRENT_POSITION, CHAR_TARGET_POSITION]
+    },
 }
 
 HUE_DEVICES = [
@@ -32,9 +59,3 @@ ENOCEAN_DEVICES = {
     "Id Rf EnOcean Motion input": ["Motion", "Brightness"]
 }
 
-HUE_CERTIFIED = [
-    "LCA001",
-    "LCT014",
-    "LCT015",
-    "LCT016"
-]

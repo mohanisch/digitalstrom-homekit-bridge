@@ -18,13 +18,21 @@ CHAR_VALVE_TYPE = "ValveType"
 CHAR_INUSE = "InUse"
 CHAR_REMAIN_DURATION = "RemainingDuration"
 CHAR_SET_DURATION = "SetDuration"
-
+CHAR_HOLD_POSITION = "HoldPosition"
+CHAR_TARGET_POSITION = "TargetPosition"
+CHAR_CURRENT_POSITION = "CurrentPosition"
+CHAR_POSITION_STATE = "PositionState"
+CHAR_TARGET_HORIZONTAL_TILT_ANGLE = "TargetHorizontalTiltAngle"
+CHAR_CURRENT_HORIZONTAL_TILT_ANGLE = "CurrentHorizontalTiltAngle"
 
 ATTR_BRIGHTNESS = "brightness"
 ATTR_HUE = "hue"
-ATTR_COLOR_TEMP = "color_temp"
+ATTR_COLOR = "color"
+ATTR_COLORTEMP = "colortemp"
 ATTR_HS_COLOR = "hs_color"
 ATTR_COLOR_MODE = "color_mode"
+ATTR_SHADE_POSITION_OUTSIDE = "shadePositionOutside"
+
 COLOR_MODE_WHITE = "white"
 
 CONTROL = {

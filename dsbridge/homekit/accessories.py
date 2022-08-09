@@ -54,7 +54,7 @@ def get_accessory(driver, device, aid):
             "input_button",
             "remote",
             "scene",
-            "script",
+            "absent",
     ):
         a_type = "Switch"
 
@@ -77,14 +77,9 @@ class DsAccessory(Accessory):
         category: str = CATEGORY_OTHER,
         **kwargs: Any,
     ) -> None:
-        """Initialize a Accessory object."""
-        super().__init__(
-            driver=driver,
-            display_name=name,
-            aid=aid
-        )
+        super().__init__(driver=driver, display_name=name, aid=aid)
         self.category = category
-
+        print(config)
         self.config = config
         self.entity_id = entity_id
         self.application = self.config['application']
@@ -113,6 +108,7 @@ class DsAccessoryDriver(AccessoryDriver):
     def set_characteristics(self, chars_query, client_addr):
         """Called from ``HAPServerHandler`` when iOS configures the characteristics.
 
+        :param client_addr:
         :param chars_query: A configuration query. For example:
 
         .. code-block:: python

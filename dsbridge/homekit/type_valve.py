@@ -1,11 +1,8 @@
 import logging
 import time
 
-from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_SPRINKLER
-
-from .const import STATE_ON, CHAR_ACTIVE, CHAR_VALVE_TYPE, CHAR_INUSE, CHAR_REMAIN_DURATION, \
-    CHAR_SET_DURATION
+from .const import STATE_ON, CHAR_ACTIVE, CHAR_VALVE_TYPE, CHAR_INUSE, CHAR_REMAIN_DURATION, CHAR_SET_DURATION
 from ..homekit import collector
 from ..homekit.accessories import TYPES, DsAccessory
 from ..helper import threaded
@@ -14,12 +11,10 @@ from . import event_decider
 
 @TYPES.register("Sprinkler")
 class Sprinkler(DsAccessory):
-
     def __init__(self, *args):
         super().__init__(*args, category=CATEGORY_SPRINKLER)
 
         self.accessory_state = False
-
         self.states = collector.get_device_state(self.entity_id)
 
         self.serv_sprinkler = self.add_preload_service(
@@ -75,7 +70,7 @@ class Sprinkler(DsAccessory):
                 self.application
             )
 
-    @Accessory.run_at_interval(3)
+    @DsAccessory.run_at_interval(3)
     async def run(self):
 
         device_state = collector.get_device_state(self.entity_id)

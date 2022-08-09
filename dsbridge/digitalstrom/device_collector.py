@@ -1,6 +1,6 @@
 import time
 
-from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API, HUE_DEVICES
+from .const import DEVICES_CHARS, PROPERTY_API, SMART_HOME_API, HUE_DEVICES, DEVICE_SUPPORT
 from .helper import generate_dsuid
 from .request_handler import DsRequest
 from ..config import args, read_config_file as c
@@ -135,20 +135,28 @@ class DssCollector(object):
             function_attributes = ({v['id']: v['attributes'] for v in self._function_blocks}).get(device['id'])
             application = ({v['id']: v['attributes']['application'] for v in self._submodules}).get(device['id'])
 
+            _technical_name = function_attributes['technicalName']
+
             if 'outputs' in function_attributes:
                 functions = {str(v['id']): v['attributes'] for v in function_attributes['outputs']}
-                if application == "lights":
-                    if 'brightness' in functions:
-                        device_support['brightness'] = True if functions['brightness']['mode'] == 'gradual' else False
 
-                    device_support['colortemp'] = True if 'colortemp' in functions else False
+                if _technical_name in DEVICE_SUPPORT:
+                    for _attr in DEVICE_SUPPORT[_technical_name]['support']:
+                        device_support[_attr] = True
+                        # print("DEVICE_SUPPORT", _technical_name, DEVICE_SUPPORT[_technical_name])
+                else:
+                    if application == "lights":
+                        if 'brightness' in functions:
+                            device_support['brightness'] = True if functions['brightness']['mode'] == 'gradual' else False
 
-                    if 'hue' in functions:
-                        device_support['color'] = True
-                        device_support['hue'] = True if function_attributes['technicalName'] in HUE_DEVICES else False
+                        device_support['colortemp'] = True if 'colortemp' in functions else False
 
-                    else:
-                        device_support['color'] = False
+                        if 'hue' in functions:
+                            device_support['color'] = True
+                            device_support['hue'] = True if function_attributes['technicalName'] in HUE_DEVICES else False
+
+                        else:
+                            device_support['color'] = False
 
                 if application == "shades":
                     for chars in function_attributes['outputs']:
@@ -171,6 +179,7 @@ class DssCollector(object):
                     "support": device_support,
                     "model": function_attributes['technicalName']
                 }
+                print(d)
                 _devices.append(d)
         return _devices
 

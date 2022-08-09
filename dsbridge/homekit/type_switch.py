@@ -12,8 +12,6 @@ from . import event_decider
 
 @TYPES.register("Switch")
 class Switch(DsAccessory):
-    category = CATEGORY_SWITCH
-
     def __init__(self, *args):
         super().__init__(*args, category=CATEGORY_SWITCH)
 

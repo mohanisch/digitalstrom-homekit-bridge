@@ -13,7 +13,7 @@ from .const import (
     CHAR_HUE,
     CHAR_SATURATION,
     CHAR_COLOR_TEMPERATURE,
-    ATTR_BRIGHTNESS, ATTR_HUE
+    ATTR_BRIGHTNESS, ATTR_HUE, ATTR_COLORTEMP, ATTR_COLOR
 )
 from . import event_decider
 
@@ -33,9 +33,9 @@ class Light(DsAccessory):
 
         self.states = None
 
-        self.brightness_supported = self.support['brightness']
-        self.colortemp_supported = self.support['colortemp']
-        self.color_supported = self.support['color']
+        self.brightness_supported = self.support[ATTR_BRIGHTNESS] if ATTR_BRIGHTNESS in self.support else False
+        self.colortemp_supported = self.support[ATTR_COLORTEMP] if ATTR_COLORTEMP in self.support else False
+        self.color_supported = self.support[ATTR_COLOR] if ATTR_COLOR in self.support else False
 
         self.states = collector.get_device_state(self.entity_id)
 
@@ -45,6 +45,7 @@ class Light(DsAccessory):
             self.chars.append(CHAR_COLOR_TEMPERATURE)
         if self.color_supported:
             self.chars.extend([CHAR_HUE, CHAR_SATURATION])
+        self.chars.append(CHAR_ON)
 
         serv_light = self.add_preload_service('Lightbulb', chars=self.chars)
         self.char_on = serv_light.configure_char(CHAR_ON, value=0)

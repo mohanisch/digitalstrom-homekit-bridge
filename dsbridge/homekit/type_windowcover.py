@@ -1,9 +1,9 @@
 """Class to hold all cover accessories."""
 import logging
-from pyhap.const import (
-    CATEGORY_WINDOW_COVERING,
-)
+from pyhap.const import CATEGORY_WINDOW_COVERING
 from . import event_decider
+from .const import CHAR_HOLD_POSITION, CHAR_TARGET_HORIZONTAL_TILT_ANGLE, CHAR_CURRENT_HORIZONTAL_TILT_ANGLE, \
+    CHAR_CURRENT_POSITION, CHAR_TARGET_POSITION, CHAR_POSITION_STATE, ATTR_SHADE_POSITION_OUTSIDE
 from ..homekit import collector
 from ..homekit.accessories import TYPES, DsAccessory
 from ..helper import threaded
@@ -14,41 +14,41 @@ class WindowsCovering(DsAccessory):
     def __init__(self, *args):
         super().__init__(*args, category=CATEGORY_WINDOW_COVERING)
 
-        self._supports_stop = True
-        self._supports_tilt = False
+        self.stop_supported = True
+        self.tilt_supported = False
 
         self.current_position = 0
         self.target_position = 0
         self.position_state = 0
 
-        if self._supports_stop:
-            self.chars.append('HoldPosition')
-        if self._supports_tilt:
-            self.chars.extend(['TargetHorizontalTiltAngle', 'CurrentHorizontalTiltAngle'])
+        if self.stop_supported:
+            self.chars.append(CHAR_HOLD_POSITION)
+        if self.tilt_supported:
+            self.chars.extend([CHAR_TARGET_HORIZONTAL_TILT_ANGLE, CHAR_CURRENT_HORIZONTAL_TILT_ANGLE])
 
         self.chars.append('Name')
 
         self.serv_cover = self.add_preload_service('WindowCovering', chars=self.chars)
 
-        if self._supports_stop:
+        if self.stop_supported:
             self.char_hold_position = self.serv_cover.configure_char(
-                'HoldPosition', setter_callback=self.set_stop
+                CHAR_HOLD_POSITION, setter_callback=self.set_stop
             )
 
-        if self._supports_tilt:
+        if self.tilt_supported:
             self.char_target_tilt = self.serv_cover.configure_char(
-                'TargetHorizontalTiltAngle', setter_callback=self.set_tilt
+                CHAR_TARGET_HORIZONTAL_TILT_ANGLE, setter_callback=self.set_tilt
             )
             self.char_current_tilt = self.serv_cover.configure_char(
-                'CurrentHorizontalTiltAngle', value=0
+                CHAR_CURRENT_HORIZONTAL_TILT_ANGLE, value=0
             )
 
         self.char_current_position = self.serv_cover.configure_char(
-            'CurrentPosition', 0)
+            CHAR_CURRENT_POSITION, 0)
         self.char_target_position = self.serv_cover.configure_char(
-            'TargetPosition', value=0, setter_callback=self.move_cover)
+            CHAR_TARGET_POSITION, value=0, setter_callback=self.move_cover)
         self.char_position_state = self.serv_cover.configure_char(
-            'PositionState', 0)
+            CHAR_POSITION_STATE, 0)
 
     def set_stop(self, value):
         """Stop the cover motion from HomeKit."""
@@ -67,7 +67,7 @@ class WindowsCovering(DsAccessory):
         logging.debug("%s: Set position to %d", self.dsuid, value)
 
         _attributes = {}
-        _attributes.update({'shadePositionOutside': self.char_target_position.value})
+        _attributes.update({ATTR_SHADE_POSITION_OUTSIDE: self.char_target_position.value})
 
         event_decider.device_event(
             self.entity_id,
@@ -82,8 +82,8 @@ class WindowsCovering(DsAccessory):
     async def run(self):
         device_services = collector.get_device_state(self.entity_id)
 
-        for char, values in device_services['states'].items():
-            if char == 'shadePositionOutside':
+        for attr, values in device_services['states'].items():
+            if attr == ATTR_SHADE_POSITION_OUTSIDE:
                 _target_value = round(values['targetvalue'])
                 _current_value = round(values['value'])
                 _position_state = 2 if self.target_position == self.current_position else 1
@@ -95,19 +95,3 @@ class WindowsCovering(DsAccessory):
                     self.char_target_position.set_value(self.target_position)
 
                     self.char_position_state.set_value(_position_state)
-
-    # @callback
-    # def async_update_state(self, new_state):
-    #     """Update cover position and tilt after state changed."""
-    #     # update tilt
-    #     if not self._supports_tilt:
-    #         return
-    #     current_tilt = new_state.attributes.get(ATTR_CURRENT_TILT_POSITION)
-    #     if not isinstance(current_tilt, (float, int)):
-    #         return
-    #     # HomeKit sends values between -90 and 90.
-    #     # We'll have to normalize to [0,100]
-    #     current_tilt = (current_tilt / 100.0 * 180.0) - 90.0
-    #     current_tilt = int(current_tilt)
-    #     self.char_current_tilt.set_value(current_tilt)
-    #     self.char_target_tilt.set_value(current_tilt)

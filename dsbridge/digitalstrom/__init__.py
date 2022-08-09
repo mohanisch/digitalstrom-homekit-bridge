@@ -56,12 +56,12 @@ class EventPatcher(object):
 
         self.request_handler.patch(SMART_HOME_API + '/dsDevices/' + dsuid + '/status', data=payload)
 
-    def patch_switch(self, switch_id: str, state: bool):
+    def patch_switch(self, switch_id: str, state):
         switch_attributes = []
-        if switch_id in ('apartmentAbsents', 'dummy'):
+        if switch_id in ('apartmentAbsents'):
             switch_scenario = {
                 "context": "applicationApartment",
-                "actionId": "absent" if state else "present",
+                "actionId": state,
                 "application": "access"
             }
             payload = json.dumps(switch_scenario).encode("UTF-8")

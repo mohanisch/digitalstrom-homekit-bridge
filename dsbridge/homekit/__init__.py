@@ -118,7 +118,7 @@ class EventDecider(object):
 
                     if _event_type == "device":
                         for e, a in self.device_events.items():
-                            if a['application'] == "manualState":
+                            if a['application'] in ("absent", "manualState"):
                                 if _application and a['application'] == _application:
                                     _value = a['attributes'][CONTROL[_application]['id']]
                                     self.ep.patch_switch(
@@ -184,8 +184,7 @@ class HomeKit:
         self.driver.add_accessory(accessory=self.bridge)
 
     def add_bridge_accessory(self, device):
-        """Set up bridge and accessory."""
-        aid = self.aid_storage.get_or_allocate_aid(unique_id=device['entity_id'])
+        aid = self.aid_storage.get_or_allocate_aid(device['entity_id'])
 
         try:
             acc = get_accessory(self.driver, device, aid)

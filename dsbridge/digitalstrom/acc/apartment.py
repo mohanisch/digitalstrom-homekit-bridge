@@ -49,7 +49,7 @@ class Apartment(object):
             "entity_id": _dsuid + ".switch",
             "dsuid": "apartmentAbsents",
             "name": "Abwesend",
-            "application": "switch",
+            "application": "absent",
             "service": "switch",
             "chars": None,
             "support": None,
