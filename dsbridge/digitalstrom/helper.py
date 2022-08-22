@@ -14,7 +14,6 @@ def create_application_token(password):
     from ..digitalstrom import SYSTEM_API
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-    result = {}
     session = requests.Session()
 
     host = args.hostname + ":" + args.http_port

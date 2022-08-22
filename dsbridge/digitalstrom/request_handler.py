@@ -1,11 +1,7 @@
 from .const import SYSTEM_API
 
 import requests
-from requests.adapters import HTTPAdapter
 import urllib3
-
-import inspect
-
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 

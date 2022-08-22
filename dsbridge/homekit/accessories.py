@@ -79,7 +79,7 @@ class DsAccessory(Accessory):
     ) -> None:
         super().__init__(driver=driver, display_name=name, aid=aid)
         self.category = category
-        print(config)
+
         self.config = config
         self.entity_id = entity_id
         self.application = self.config['application']
@@ -124,7 +124,7 @@ class DsAccessoryDriver(AccessoryDriver):
 
         :type chars_query: dict
         """
-        # TODO: Add support for chars that do no support notifications.
+
         updates = {}
         setter_results = {}
         had_error = False

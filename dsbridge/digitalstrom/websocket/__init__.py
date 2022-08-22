@@ -19,8 +19,18 @@ def start_websocket():
 
 class DsWebsocket(object):
     def __init__(self):
-        self.wshost = "ws://{0}:{1}/api/v1/apartment/notifications".format(
-            args.hostname, args.ws_port)
+        self.host = "ws://{0}:{1}/api/v1/apartment/notifications".format(args.dss_hostname, args.ws_port)
+
+    def start(self):
+        websocket.enableTrace(False)
+        ws = websocket.WebSocketApp(
+            self.host,
+            on_open=self.on_open,
+            on_message=self.on_message,
+            on_error=self.on_error,
+            on_close=self.on_close
+        )
+        ws.run_forever()
 
     @staticmethod
     def on_message(ws, message):
@@ -35,11 +45,13 @@ class DsWebsocket(object):
             if _message['arguments'][0]['type'] == 'apartmentStructureChanged':
                 logging.debug("Apartment structure changed")
 
+                # TODO: Homekit has ti be restarted
                 # homekit.stop()
                 time.sleep(2)
                 # _thread.start_new_thread(run_homekit, ())
 
-    def on_open(self, ws):
+    @staticmethod
+    def on_open(ws):
         def run_websocket():
             obj = {
                 "protocol": "json",
@@ -57,14 +69,3 @@ class DsWebsocket(object):
     @staticmethod
     def on_close(ws, close_status_code, close_msg):
         logging.info("Close websocket")
-
-    def start(self):
-        websocket.enableTrace(False)
-        ws = websocket.WebSocketApp(
-            self.wshost,
-            on_open=self.on_open,
-            on_message=self.on_message,
-            on_error=self.on_error,
-            on_close=self.on_close
-        )
-        ws.run_forever()

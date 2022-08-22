@@ -157,12 +157,14 @@ class HomeKit:
             name,
             port,
             persist_file,
+            address=None,
             pincode=None,
             devices=None,
     ):
         """Initialize a HomeKit object."""
         self._name = name
         self._port = port
+        self._address = address
         self._pincode = pincode
         self._devices = devices or []
 
@@ -178,6 +180,7 @@ class HomeKit:
         logging.info("Setup HomeKit driver")
         self.driver = DsAccessoryDriver(
             port=self._port,
+            address=self._address,
             persist_file=self.persist_file
         )
         self.bridge = DsBridge(self.driver, self._name)
@@ -231,6 +234,7 @@ def get_entity_by_aid(aid: int):
 
 homekit = HomeKit(
     name=config.args.homekit_bridge_name,
-    port=51826,
+    address=config.args.homekit_address,
+    port=config.args.homekit_port,
     persist_file=(config.args.persit_file_path + "/" + config.args.persit_file_name)
 )

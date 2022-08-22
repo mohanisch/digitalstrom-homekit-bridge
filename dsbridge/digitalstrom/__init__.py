@@ -10,9 +10,9 @@ class EventPatcher(object):
     def __init__(self):
         from ..config import args, read_config_file as config_file
         config_file = config_file()
-        from .request_handler import DsRequest  # TODO: Gefällt mir nicht
-        self.request_handler = DsRequest("https://" + args.hostname + ":" + args.http_port + "/",
-                                         config_file['token'])  # TODO: Gefällt mir nicht
+
+        from .request_handler import DsRequest
+        self.request_handler = DsRequest("https://" + args.dss_hostname + ":" + args.dss_http_port + "/", config_file['token'])
 
     @threaded
     def patch_zone(self, zoneid: int, application: str, actionid: str):
@@ -58,7 +58,7 @@ class EventPatcher(object):
 
     def patch_switch(self, switch_id: str, state):
         switch_attributes = []
-        if switch_id in ('apartmentAbsents'):
+        if switch_id in 'apartmentAbsents':
             switch_scenario = {
                 "context": "applicationApartment",
                 "actionId": state,
