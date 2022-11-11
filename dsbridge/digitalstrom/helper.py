@@ -16,7 +16,7 @@ def create_application_token(password):
 
     session = requests.Session()
 
-    host = args.hostname + ":" + args.http_port
+    host = args.dss_hostname + ":" + args.dss_http_port
 
     logintoken_param = {"user": "dssadmin", "password": password}
     logintoken = session.get("https://" + host + "/" + SYSTEM_API + '/login', params=logintoken_param,

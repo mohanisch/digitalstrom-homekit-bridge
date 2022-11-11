@@ -1,29 +1,45 @@
 entities:
-- application: manualState
-  chars: null
-  dsuid: '1659975144'
-  entity_id: 70ece817fee33f63a1f615c558dc697b00.manualState
-  model: Benutzerdefinierte Zustand
-  name: Garten Sprinkler Seite
-  service: sprinkler
-  support: null
-  zone: "Benutzerdefinierte Zust\xE4nde"
-- application: manualState
-  chars: null
-  dsuid: '1644279004'
-  entity_id: c14765c53a8d3ca898afe2664f07ef9d00.manualState
-  model: Benutzerdefinierte Zustand
-  name: BWMs
-  service: switch
-  support: null
-  zone: "Benutzerdefinierte Zust\xE4nde"
-- application: absent
-  chars: null
-  dsuid: apartmentAbsents
-  entity_id: 6bc23675c24a38eba40060e7155fef3500.switch
-  name: Abwesend
-  service: switch
-  support: null
-  zone: Apartment
-token: 621024e8e2f8c790e46be42862d7c3e3755a100031eae23690dba66c418794da
-zones: []
+- application: lights
+  chars: []
+  dsuid: 2be3b8be475c514080b2cb89c97354d100
+  entity_id: 2be3b8be475c514080b2cb89c97354d100.lights
+  mode: ''
+  model: 'Extended color light: TS0505A'
+  name: Arbeitszimmer Monitor
+  present: true
+  service: lights
+  support:
+    brightness: true
+    color: true
+    colortemp: true
+    hue: false
+  zone: Arbeitszimmer
+  zoneid: '28313'
+- application: lights
+  chars: []
+  dsuid: 302ed89f43f0000000000580000d7e9200
+  entity_id: 302ed89f43f0000000000580000d7e9200.lights
+  mode: ''
+  model: GE-SDS200-CW
+  name: Arbeitszimmer Tischlampe
+  present: true
+  service: lights
+  support:
+    brightness: true
+    'on': true
+  zone: Arbeitszimmer
+  zoneid: '28313'
+token: d2bb3b9ea966eda61c19cae31ecf5d2a8c12d68ccce2032f33a36502fe446d43
+zones:
+- applications:
+    audio:
+    - 29d0a69c02e3576980737cf3513280ed00
+    joker:
+    - b4c0929620e05eb080c1733f8f5eddd600
+    lights:
+    - 302ed89f43f0000000000580000d7e9200
+    - 303505d7f800000000000080000460ba00
+    - 2be3b8be475c514080b2cb89c97354d100
+    shades:
+    - 3504175fe0000000000000000008762e00
+  id: '28313'
