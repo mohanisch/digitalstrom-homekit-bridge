@@ -1,11 +1,11 @@
 HAP-python[QRCode]==4.4.0
-setuptools~=60.9.3
+setuptools==65.6.3
 PyQRCode~=1.2.1
 fnvhash~=0.1.0
 websocket~=0.2.1
-websocket-client~=1.2.3
-requests~=2.27.1
-urllib3~=1.26.9
+websocket-client==1.4.2
+requests==2.28.1
+urllib3==1.26.13
 rgbxy
 PyYAML~=6.0
 Flask~=2.2.2
