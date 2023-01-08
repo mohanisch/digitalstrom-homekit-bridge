@@ -2,7 +2,7 @@ from typing import Final
 
 MAJOR_VERSION: Final = "2"
 MINOR_VERSION: Final = "0"
-PATCH_VERSION: Final = "9"
+PATCH_VERSION: Final = "10"
 __short_version__: Final = f"{MAJOR_VERSION}.{MINOR_VERSION}"
 __version__: Final = f"{__short_version__}.{PATCH_VERSION}"
 
@@ -13,4 +13,7 @@ BRIDGE_NAME = "digitalStrom Homekit Bridge"
 BRIDGE_SERIAL_NUMBER = __version__
 MANUFACTURER = "Marco Hanisch"
 
-
+STATUS_READY = 0
+STATUS_RUNNING = 1
+STATUS_STOPPED = 2
+STATUS_WAIT = 3

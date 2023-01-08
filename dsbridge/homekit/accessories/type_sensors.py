@@ -1,10 +1,10 @@
 from pyhap.const import CATEGORY_SENSOR
 
-from ..homekit import collector
-from ..homekit.accessories import TYPES, DsAccessory
+from ...digitalstrom import state_collector
+from dsbridge.homekit.accessories import ACC_TYPES, DsAccessory
 
 
-@TYPES.register("TemperatureSensor")
+@ACC_TYPES.register("TemperatureSensor")
 class TemperatureSensor(DsAccessory):
     def __init__(self, *args):
         super().__init__(*args, category=CATEGORY_SENSOR)
@@ -16,7 +16,7 @@ class TemperatureSensor(DsAccessory):
 
     @DsAccessory.run_at_interval(3)
     async def run(self):
-        device_services = collector.get_device_state(self.entity_id)
+        device_services = state_collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():
             if char == 'temperature':
                 _value = round(values['value'], 2)
@@ -25,7 +25,7 @@ class TemperatureSensor(DsAccessory):
                     self.char_temp.set_value(self.temperature)
 
 
-@TYPES.register("HumiditySensor")
+@ACC_TYPES.register("HumiditySensor")
 class HumiditySensor(DsAccessory):
     def __init__(self, *args):
         super().__init__(*args, category=CATEGORY_SENSOR)
@@ -37,7 +37,7 @@ class HumiditySensor(DsAccessory):
 
     @DsAccessory.run_at_interval(60)
     async def run(self):
-        device_services = collector.get_device_state(self.entity_id)
+        device_services = state_collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():
             if char == 'humidity':
                 _value = round(values['value'], 2)
@@ -46,7 +46,7 @@ class HumiditySensor(DsAccessory):
                     self.char_temp.set_value(self.humidity)
 
 
-@TYPES.register("LightSensor")
+@ACC_TYPES.register("LightSensor")
 class LightSensor(DsAccessory):
     def __init__(self, *args):
         super().__init__(*args, category=CATEGORY_SENSOR)
@@ -58,7 +58,7 @@ class LightSensor(DsAccessory):
 
     @DsAccessory.run_at_interval(60)
     async def run(self):
-        device_services = collector.get_device_state(self.entity_id)
+        device_services = state_collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():
             if char == 'brightness':
                 _value = round(values['value'], 2)
@@ -67,7 +67,7 @@ class LightSensor(DsAccessory):
                     self.char_lightlevel.set_value(self.brightness)
 
 
-@TYPES.register("MotionSensor")
+@ACC_TYPES.register("MotionSensor")
 class MotionSensor(DsAccessory):
     def __init__(self, *args):
         super().__init__(*args, category=CATEGORY_SENSOR)
@@ -79,7 +79,7 @@ class MotionSensor(DsAccessory):
 
     @DsAccessory.run_at_interval(2)
     async def run(self):
-        device_services = collector.get_device_state(self.entity_id)
+        device_services = state_collector.get_device_state(self.entity_id)
         for char, values in device_services['states'].items():
             if char == 'motion':
                 _value = round(values['value'], 2)

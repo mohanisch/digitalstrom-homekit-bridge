@@ -2,23 +2,23 @@ import logging
 import time
 
 from pyhap.const import CATEGORY_LIGHTBULB
-from ..homekit import collector
-from ..homekit.accessories import TYPES, DsAccessory
-from ..helper import threaded
+from dsbridge.helper import threaded
 
-from .const import (
+from . import ACC_TYPES, DsAccessory
+from ..const import (
     STATE_ON,
     CHAR_ON,
     CHAR_BRIGHTNESS,
     CHAR_HUE,
     CHAR_SATURATION,
     CHAR_COLOR_TEMPERATURE,
-    ATTR_BRIGHTNESS, ATTR_HUE, ATTR_COLORTEMP, ATTR_COLOR
+    ATTR_BRIGHTNESS, ATTR_COLORTEMP, ATTR_COLOR
 )
-from . import event_decider
+from .. import event_decider
+from ...digitalstrom import state_collector
 
 
-@TYPES.register("Light")
+@ACC_TYPES.register("Light")
 class Light(DsAccessory):
     def __init__(self, *args):
         super().__init__(*args, category=CATEGORY_LIGHTBULB)
@@ -37,7 +37,7 @@ class Light(DsAccessory):
         self.colortemp_supported = self.support[ATTR_COLORTEMP] if ATTR_COLORTEMP in self.support else False
         self.color_supported = self.support[ATTR_COLOR] if ATTR_COLOR in self.support else False
 
-        self.states = collector.get_device_state(self.entity_id)
+        self.states = state_collector.get_device_state(self.entity_id)
 
         if self.brightness_supported:
             self.chars.append(CHAR_BRIGHTNESS)
@@ -165,7 +165,7 @@ class Light(DsAccessory):
     @DsAccessory.run_at_interval(3)
     async def run(self):
         """Handle accessory driver started event."""
-        device_services = collector.get_device_state(self.entity_id)
+        device_services = state_collector.get_device_state(self.entity_id)
         current_time = int(time.time())
 
         for char, values in device_services['states'].items():
@@ -184,6 +184,7 @@ class Light(DsAccessory):
                 _value = round(values['value'])
                 self.saturation = _value
                 self.char_saturation.set_value(self.saturation)
+
             if char == "colortemp" and current_time - 3 < device_services['last_change']:
                 _value = round(values['value'])
                 self.char_colortemp.set_value(_value)
@@ -212,7 +213,6 @@ class Light(DsAccessory):
         # color_mode_changed = self._previous_color_mode != color_mode
         # self._previous_color_mode = color_mode
 
-        # Handle Brightness
         if (
                 self.brightness_supported
                 and (brightness := attributes[ATTR_BRIGHTNESS]) is not None
@@ -224,6 +224,7 @@ class Light(DsAccessory):
             self.char_brightness.set_value(brightness)
             # if color_mode_changed:
             #     self.char_brightness.notify()
+        # Handle Brightness
 
         # Handle Color - color must always be set before color temperature
         # or the iOS UI will not display it correctly.

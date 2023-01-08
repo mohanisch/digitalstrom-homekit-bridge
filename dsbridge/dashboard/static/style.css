@@ -24,6 +24,14 @@ body {
   text-align: left;
 }
 
+.state_active {
+    background: #f5bc42
+}
+
+.state_inactive {
+    background: none
+}
+
 #main {
   width: 520px;
   margin: 30px auto;
@@ -134,6 +142,7 @@ h4 {
 }
 
 .checkbox .label-text,
+.checkbox .label-img,
 .radiobutton .label-text,
 .radio-strip .label-text {
 	position: relative;
@@ -288,4 +297,17 @@ label.radiobutton .label-text img {
 }
 .enhanced .radio-strip .label-text:after {
 	display: none;
+}
+
+# tabs
+
+.ui-tabs-vertical { width: 55em; }
+.ui-tabs-vertical .ui-tabs-nav { padding: .2em .1em .2em .2em; float: left; width: 12em; }
+.ui-tabs-vertical .ui-tabs-nav li { clear: left; width: 100%; border-bottom-width: 1px !important; border-right-width: 0 !important; margin: 0 -1px .2em 0; }
+.ui-tabs-vertical .ui-tabs-nav li a { display:block; }
+.ui-tabs-vertical .ui-tabs-nav li.ui-tabs-active { padding-bottom: 0; padding-right: .1em; border-right-width: 1px; }
+.ui-tabs-vertical .ui-tabs-panel { padding: 1em; float: right; width: 40em;}
+
+.ui-tabs-vertical {
+    width: 55em;
 }

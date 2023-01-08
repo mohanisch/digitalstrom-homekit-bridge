@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import _thread
 import logging
-from collections.abc import Callable
 
 from .const import CONTROL, STATE_ON, STATE_OFF, STATE_UP, STATE_DOWN
 from .. import config
@@ -10,18 +9,10 @@ from .. import config
 from .accessories import get_accessory, DsAccessoryDriver, DsBridge
 from .aid_manager import AccessoryAidStorage
 from .util import async_show_setup_message
+from ..const import STATUS_READY
+from ..digitalstrom import state_collector
 
-from ..digitalstrom.device_collector import DssCollector
-from ..digitalstrom import EventPatcher
-
-collector = DssCollector()
-
-STATUS_READY = 0
-STATUS_RUNNING = 1
-STATUS_STOPPED = 2
-STATUS_WAIT = 3
-
-CALLBACK_TYPE = Callable[[], None]
+from ..digitalstrom.eventpatcher import EventPatcher
 
 
 def add_devices():
@@ -33,12 +24,17 @@ def add_devices():
 def start_homekit():
     def run_homekit():
         homekit.setup()
-        collector.gather_devices_status()
+        state_collector.gather_devices_status()
         add_devices()
         logging.info("Start homekit...")
         homekit.start()
 
     _thread.start_new_thread(run_homekit, ())
+
+
+def stop_homekit():
+    logging.info("Stopping homekit...")
+    homekit.stop()
 
 
 class EventDecider(object):
@@ -48,7 +44,7 @@ class EventDecider(object):
 
         self.ep = EventPatcher()
 
-    def recieve_hap_event(self, events):
+    def receive_hap_event(self, events):
         _events = {}
         for event in events:
             if 'ev' in event:
@@ -127,7 +123,7 @@ class EventDecider(object):
                             else:
                                 if a['zoneid'] == zoneid:
                                     if _application and a['application'] == _application:
-                                        if a['attributes'][CONTROL[_application]['id']] in (0, 100):
+                                        if a['attributes'][CONTROL[_application]['id']] in CONTROL[_application]['device_scene'].keys():
                                             _value = a['attributes'][CONTROL[_application]['id']]
                                             action = CONTROL[_application]['device_scene'][_value]
                                             self.ep.patch_device_scenario(
@@ -202,7 +198,7 @@ class HomeKit:
         self.driver.start()
 
     def stop(self):
-        self.driver.stop()
+        return self.driver.stop()
 
     def signal_handler(self, _signal, _frame):
         self.driver.signal_handler(_signal, _frame)

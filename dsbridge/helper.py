@@ -7,6 +7,16 @@ import yaml
 import os
 
 
+def read_config(path):
+    with open(path, 'r') as file:
+        try:
+            cur_yaml = yaml.safe_load(file)
+        except yaml.YAMLError as exc:
+            print(exc)
+
+    return cur_yaml
+
+
 def write_config(path, data):
     cur_yaml = {}
     if isWritable(path):

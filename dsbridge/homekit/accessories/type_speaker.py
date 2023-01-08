@@ -4,14 +4,14 @@ import time
 from pyhap.accessory import Accessory
 from pyhap.const import CATEGORY_SPEAKER
 
-from .const import CHAR_ON, STATE_ON, CHAR_ACTIVE, CHAR_NAME
-from ..homekit import collector
-from ..homekit.accessories import TYPES, DsAccessory
-from ..helper import threaded
-from . import event_decider
+from dsbridge.homekit.const import CHAR_ON, STATE_ON, CHAR_ACTIVE, CHAR_NAME
+from dsbridge.homekit import state_collector
+from dsbridge.homekit.accessories import ACC_TYPES, DsAccessory
+from dsbridge.helper import threaded
+from dsbridge.homekit import event_decider
 
 
-@TYPES.register("Speaker")
+@ACC_TYPES.register("Speaker")
 class Speaker(DsAccessory):
 
     SOURCES = {

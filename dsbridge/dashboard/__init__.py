@@ -1,4 +1,3 @@
-import json
 from io import BytesIO
 
 import base36
@@ -8,6 +7,7 @@ from waitress import serve
 
 from .. import config
 from ..helper import write_config
+from ..digitalstrom import device_collector, state_collector
 
 http = Flask(__name__)
 http.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
@@ -22,13 +22,17 @@ def main():
         return redirect("/onboarding/start", code=302)
     else:
         entities = config.read_config_file()['entities']
+        states = state_collector.gather_devices_status()
+
         res = {}
         for item in entities:
+            if item['entity_id'] in states:
+                item.update({"state": states[item['entity_id']]})
             res.setdefault(item['zone'], []).append(item)
 
         return render_template(
             'dashboard_main.html',
-            entities=entities
+            entities=res
         )
 
 
@@ -47,8 +51,7 @@ def save_devices():
     devices = request_data['devices']
     devices_subapplication = request_data['device_subapplication']
 
-    from ..digitalstrom.device_collector import DssCollector
-    entities = DssCollector().get_entities()
+    entities = device_collector.get_entities()
 
     device_obj = []
     for device in devices:
@@ -61,7 +64,7 @@ def save_devices():
 
     zone_obj = []
     for zoneid in zoneids:
-        zone_devices = DssCollector().get_zone(zoneid)['devices']
+        zone_devices = device_collector.get_zone(zoneid)['devices']
         z = {
             "id": zoneid,
             "applications": zone_devices
@@ -70,7 +73,7 @@ def save_devices():
 
     from ..helper import write_config
     write_config(config.args.config_path + '/config.yml', {'entities': device_obj, 'zones': zone_obj})
-
+    restart_bridge()
     return {"ok": True}
 
 
@@ -90,9 +93,14 @@ def requesttoken():
     return response
 
 
-@http.route("/onboarding/", methods=['GET'])
-def test():
-    return redirect("/onboarding/start", code=302)
+@http.route("/restart-bridge", methods=['POST'])
+def restart_bridge():
+    from ..homekit import start_homekit, stop_homekit
+    import time
+    stop_homekit()
+    time.sleep(2.4)
+    # homekit.start()
+    start_homekit()
 
 
 @http.route("/onboarding/<step>", methods=['GET'])
@@ -113,11 +121,15 @@ def onboarding(step):
             'onboarding_main.html'
         )
     if step == 'devices':
-        from ..digitalstrom.device_collector import DssCollector
-        entities = DssCollector().get_entities()
+        from ..helper import read_config
+        entities = device_collector.get_entities()
+        cur_config = read_config(config.args.config_path + '/config.yml')
 
         res = {}
         for item in entities:
+            item.update({
+                'configured': any(item['entity_id'] in d['entity_id'] for d in cur_config['entities'])
+            })
             res.setdefault(item['zone'], []).append(item)
 
         return render_template(
@@ -142,6 +154,17 @@ def onboarding(step):
             qrcode=qr,
             pincode=bridge_state.pincode.decode()
         )
+
+
+# @http.route("/config", methods=['GET'])
+# def config():
+#
+#     res = {}
+#
+#     return render_template(
+#         'onboarding_devices.html',
+#         entities=res
+#     )
 
 
 def xhm_uri(pincode, setup_id):
@@ -170,6 +193,7 @@ def xhm_uri(pincode, setup_id):
     encoded_payload = encoded_payload.rjust(9, "0")
 
     return "X-HM://" + encoded_payload + setup_id
+
 
 def run_server():
     serve(http, host="0.0.0.0", port=8081)

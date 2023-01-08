@@ -3,21 +3,22 @@ import time
 
 from pyhap.const import CATEGORY_SWITCH
 
-from .const import CHAR_ON, STATE_ON
-from ..homekit import collector
-from ..homekit.accessories import TYPES, DsAccessory
-from ..helper import threaded
-from . import event_decider
+from dsbridge.homekit.const import CHAR_ON
+from dsbridge.homekit.accessories import ACC_TYPES, DsAccessory
+from dsbridge.helper import threaded
+from dsbridge.homekit import event_decider
+
+from ...digitalstrom import state_collector
 
 
-@TYPES.register("Switch")
+@ACC_TYPES.register("Switch")
 class Switch(DsAccessory):
     def __init__(self, *args):
         super().__init__(*args, category=CATEGORY_SWITCH)
 
         self.accessory_state = False
 
-        self.states = collector.get_device_state(self.entity_id)
+        self.states = state_collector.get_device_state(self.entity_id)
 
         serv_switch = self.add_preload_service('Switch')
         self.char_on = serv_switch.configure_char(
@@ -50,19 +51,19 @@ class Switch(DsAccessory):
     @DsAccessory.run_at_interval(3)
     async def run(self):
 
-        device_state = collector.get_device_state(self.entity_id)
+        device_state = state_collector.get_device_state(self.entity_id)
         current_time = int(time.time())
 
-        _value = device_state['state'] == STATE_ON
+        _value = device_state['states']['on']
 
-        if self.accessory_state != bool(_value) and current_time-3 < device_state['last_change']:
+        if self.accessory_state != bool(_value) and current_time - 3 < device_state['last_change']:
             self.accessory_state = bool(_value)
             self.char_on.set_value(self.accessory_state)
 
     def async_update_state(self, new_state):
         """Update switch state after state changed."""
 
-        current_state = new_state['state'] == STATE_ON
+        current_state = new_state['states']['on']
         self.accessory_state = current_state
         logging.debug("%s: Set current state to %s", self.dsuid, current_state)
         self.char_on.set_value(current_state)

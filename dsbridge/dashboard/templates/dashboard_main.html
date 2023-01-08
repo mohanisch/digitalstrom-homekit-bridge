@@ -7,7 +7,15 @@
         <script src="{{ url_for('static', filename='jquery-3.4.1.min.js') }}"></script>
         <script>
             $(document).ready(function(){
-
+                $('input#restart-bridge').click( function() {
+                    $.ajax({
+                        url: "/restart-bridge",
+                        type: 'post',
+                        dataType: 'json',
+                        data: JSON.stringify(""),
+                        contentType: 'application/json'
+                    });
+                });
             });
 
          </script>
@@ -15,16 +23,30 @@
     <body>
 
         <div style="margin: 0 auto;">
+            <div id="main-bottom">
+                <input type="button" id="restart-bridge" class="button-green forms" value="Restart">
+            </div>
+            {% for zone, entities in entities.items() %}
             <div class="room">
+                <h4>{{ zone }}</h4>
                 {% for e in entities %}
+                    {% set state = "active" if 'on' in e.state.states and e.state.states['on'] else "inactive" %}
                 <div class="content-box">
-                    <div class="stateless-action-tile " title="Click to activate scenario" aria-label="Click to activate scenario">
-<!--                        <img src="{{ url_for('static', filename='icons/light_off.png') }}" class="content-box-icon" alt="Scenario">-->
-                        <span class="stateless-action-name " title="">{{ e.name }}</span>
+                    {% if e.service == 'sensor' %}
+                     <div class="stateless-action-tile state_{{ state }}" title="Click to activate scenario" aria-label="Click to activate scenario">
+                        <img src="{{ url_for('static', filename='icons/png/32x32/' + e.application + '.png') }}" class="content-box-icon" alt="Scenario">
+                        <span class="stateless-action-name " title="">{{ e.state.states[e.application]['value'] }}</span>
                     </div>
+                    {% else %}
+                    <div class="stateless-action-tile state_{{ state }}" title="Click to activate scenario" aria-label="Click to activate scenario">
+                        <img src="{{ url_for('static', filename='icons/png/64x64/' + e.application + '.png') }}" class="content-box-icon" alt="Scenario">
+                        <span class="stateless-action-name " title=""> {{ e.name | replace(zone, '') }}</span>
+                    </div>
+                    {% endif %}
                 </div>
                 {% endfor %}
             </div>
+            {% endfor %}
         </div>
     </body>
 </html>

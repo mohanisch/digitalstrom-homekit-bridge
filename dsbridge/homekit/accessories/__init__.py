@@ -5,16 +5,15 @@ import time
 from typing import Any, cast
 from uuid import UUID
 
-from pyhap.util import callback as pyhap_callback
 from pyhap.accessory import Accessory, get_topic, Bridge
-from pyhap.accessory_driver import AccessoryDriver, _wrap_char_setter, _wrap_acc_setter, _wrap_service_setter
-from pyhap.const import HAP_REPR_AID, HAP_REPR_IID, HAP_REPR_PID, HAP_REPR_CHARS, HAP_SERVER_STATUS, \
-    HAP_PERMISSION_NOTIFY, HAP_REPR_VALUE, HAP_REPR_STATUS, CATEGORY_OTHER
+from pyhap.accessory_driver import AccessoryDriver
+from pyhap.const import CATEGORY_OTHER
+from pyhap.util import callback as pyhap_callback
 
-from .util import Registry, async_show_setup_message, async_suppress_setup_message
-from ..const import BRIDGE_SERIAL_NUMBER, BRIDGE_NAME, MANUFACTURER
+from ..util import Registry, async_suppress_setup_message, async_show_setup_message
+from ...const import BRIDGE_SERIAL_NUMBER, BRIDGE_NAME, MANUFACTURER
 
-TYPES = Registry()
+ACC_TYPES = Registry()
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +52,7 @@ def get_accessory(driver, device, aid):
             "input_boolean",
             "input_button",
             "remote",
-            "scene",
+            "joker",
             "absent",
     ):
         a_type = "Switch"
@@ -62,7 +61,7 @@ def get_accessory(driver, device, aid):
         return None
 
     logging.info('Add "%s (%s)" as "%s"', device['name'], device['entity_id'], a_type)
-    return TYPES[a_type](driver, device['name'], aid, device['entity_id'], device)
+    return ACC_TYPES[a_type](driver, device['name'], aid, device['entity_id'], device)
 
 
 class DsAccessory(Accessory):
@@ -106,24 +105,13 @@ class DsAccessoryDriver(AccessoryDriver):
         super().__init__(**kwargs)
 
     def set_characteristics(self, chars_query, client_addr):
-        """Called from ``HAPServerHandler`` when iOS configures the characteristics.
-
-        :param client_addr:
-        :param chars_query: A configuration query. For example:
-
-        .. code-block:: python
-
-           {
-              "characteristics": [{
-                 "aid": 1,
-                 "iid": 2,
-                 "value": False, # Value to set
-                 "ev": True # (Un)subscribe for events from this characteristics.
-              }]
-           }
-
-        :type chars_query: dict
         """
+        Copied from accessory_driver to get event from HAP and able to inject into bridge status.
+        Events from HAP are pushed into EventDecider
+        """
+
+        from pyhap.const import HAP_REPR_AID, HAP_REPR_IID, HAP_REPR_PID, HAP_REPR_CHARS, HAP_SERVER_STATUS, \
+            HAP_PERMISSION_NOTIFY, HAP_REPR_VALUE, HAP_REPR_STATUS
 
         updates = {}
         setter_results = {}
@@ -136,8 +124,8 @@ class DsAccessoryDriver(AccessoryDriver):
             if expire_time is None or time.time() > expire_time:
                 expired = True
 
-        from . import event_decider
-        event_decider.recieve_hap_event(chars_query['characteristics'])
+        from .. import event_decider
+        event_decider.receive_hap_event(chars_query['characteristics'])
 
         for cq in chars_query[HAP_REPR_CHARS]:
             aid, iid = cq[HAP_REPR_AID], cq[HAP_REPR_IID]
@@ -163,6 +151,7 @@ class DsAccessoryDriver(AccessoryDriver):
 
             updates.setdefault(aid, {})[iid] = cq[HAP_REPR_VALUE]
 
+        from pyhap.accessory_driver import _wrap_char_setter, _wrap_acc_setter, _wrap_service_setter
         for aid, new_iid_values in updates.items():
             if self.accessory.aid == aid:
                 acc = self.accessory

@@ -1,4 +1,3 @@
-from .const import SYSTEM_API
 
 import requests
 import urllib3
@@ -6,7 +5,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-class DsRequest:
+class RequestHandler:
     def __init__(self, base_url, token, **kwargs):
         self.token = token
         self.base_url = base_url
@@ -42,11 +41,11 @@ class DsRequest:
             **kwargs
         )
 
-    def get_token(self):
+    def get_token(self, api):
         param = {"loginToken": "%s" % self.token}
 
         return self.session.get(
-            self.base_url + SYSTEM_API + "/loginApplication",
+            self.base_url + api + "/loginApplication",
             headers=self.headers,
             verify=False,
             params=param
@@ -57,7 +56,7 @@ class DsRequest:
         for key, value in source.items():
             if isinstance(value, dict):
                 node = destination.setdefault(key, {})
-                DsRequest.__deep_merge(value, node)
+                RequestHandler.__deep_merge(value, node)
             else:
                 destination[key] = value
         return destination

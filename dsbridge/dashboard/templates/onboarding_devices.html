@@ -4,15 +4,11 @@
         <meta name="viewport" content="initial-scale=0, maximum-scale=1, user-scalable=yes, width=device-width">
         <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
         <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='waitMe.min.css') }}">
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='waitMe.min.css') }}">
         <script src="{{ url_for('static', filename='jquery-3.4.1.min.js') }}"></script>
         <script src="{{ url_for('static', filename='dsbridge.js') }}"></script>
         <script src="{{ url_for('static', filename='waitMe.min.js') }}"></script>
+
         <title>App</title>
-
-        <script>
-
-        </script>
     </head>
 
   <body>
@@ -25,18 +21,22 @@
             <div id="main-mid">
                 <p class="beschreibung">In der folgenden List können Geräte ausgewählt werden, welche in HomeKit erscheinen sollen. Dieses kann später in den Einstellungen noch verändert werden.</p>
                 <form id="ds_devices" name="devices" method="post">
-                {% for zone, entities in entities.items()  %}
+                {% for zone, entities in entities.items() %}
                     <div class="zonebox" style="background: #fff;padding: 5px;margin-bottom: 15px;">
                         <h4>{{ zone }}</h4>
                         <ul style="list-style: none; margin: 0">
                             {% for entity in entities %}
+                            {% set configured = "checked" if entity.configured else "" %}
+
                             <li style="padding: 12px 10px;">
                                 <label class="checkbox" style="margin-right: 10px;" for="{{ entity.entity_id }}">
-                                    <input type="checkbox" id="{{ entity.entity_id }}" value="{{ entity.entity_id }}" class="entityid" data-entityid="{{ entity.entity_id }}" >
-                                    <span class="label-text">{{ entity.name | replace(zone, '') }}
+                                    <input type="checkbox" name="{{ entity.entity_id }}" id="{{ entity.entity_id }}" value="{{ entity.entity_id }}" class="entityid" data-entityid="{{ entity.entity_id }}" {{ configured }}>
+                                    <img class="label-img" src="{{ url_for('static', filename='icons/png/32x32/' + entity.application + '.png') }}" class="content-box-icon">
+                                    <span class="label-text">
+                                        {{ entity.name | replace(zone, '') }}
                                         <em>{{ entity.model }}</em>
                                     </span>
-                                    {% if "button" in entity.service or "manualState" in entity.service %}
+                                    {% if "button" in entity.service or "manualState" in entity.service or "joker" in entity.service %}
                                     <select name="entity_subapplication" class="subapplication" data-entityid="{{ entity.entity_id }}">
                                         <option value="1" data-subapplication="switch">Schalter</option>
                                         <option value="2" data-subapplication="sprinkler">Sprinkler</option>

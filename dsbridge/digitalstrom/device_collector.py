@@ -1,46 +1,29 @@
+from .const import SMART_HOME_API
 import time
 
-from .const import DEVICES_CHARS, SMART_HOME_API, HUE_DEVICES, DEVICE_SUPPORT
 from .helper import generate_dsuid
-from .request_handler import DsRequest
+from .request_handler import RequestHandler
 from ..config import args, read_config_file as c
 
 
-class DssCollector(object):
-    """ Class to structure dS device and hold information of devices, and it states """
+def collect_data(uri: str, api: str = SMART_HOME_API, params=None, key="data"):
+    request_handler = RequestHandler("https://" + args.dss_hostname + ":" + args.dss_http_port, c()['token'])
+    if params is None:
+        params = {}
 
+    _response = request_handler.get(api + uri, params=params)[key]
+    return _response
+
+
+class DssStateCollector(object):
     def __init__(self):
-        self._devices = {}
-        self._function_blocks = {}
-        self._user_defined_states = {}
-        self._submodules = {}
-        self._zones = {}
-        self._apartment = {}
-        self._measurements = {}
-
         self._device_states = {}
-        self.collected_zone = {}
 
-        self.config_file = c()
-
-        self.request_handler = DsRequest("https://" + args.dss_hostname + ":" + args.dss_http_port + "/",
-                                         self.config_file['token'])
-
-        # TODO: imports have to be restructured
-        self.apartment_data = self.collect_data("/", params={"include": "dsDevices,functionBlocks,userDefinedStates,submodules,zones"})
-        self._function_blocks = self.apartment_data['included']['functionBlocks']
-        self._submodules = self.apartment_data['included']['submodules']
-        self._transform_zones(self.apartment_data['included']['zones'])
-
-    def collect_data(self, uri: str, api: str = SMART_HOME_API, params=None, key="data"):
-        if params is None:
-            params = {}
-
-        _response = self.request_handler.get(api + uri, params=params)[key]
-        return _response
+    def get_device_state(self, entity_id: str):
+        return self._device_states[entity_id]
 
     def gather_devices_status(self):
-        apartment = self.collect_data("/status", params={"include": "dsDevices,zones,userDefinedStates"})
+        apartment = collect_data("/status", params={"include": "dsDevices,zones,userDefinedStates"})
         apartment_status = apartment['included']
 
         zones_status = apartment_status['zones']
@@ -48,18 +31,21 @@ class DssCollector(object):
 
         _measurements = {}
 
-        from .acc import Apartment, UserDefinedStates, OutputDevices
-        apartment = Apartment(apartment['id'], apartment['attributes'])
-        self._device_states.update(apartment.gather_state(last_change))
+        from .acc.user_defined_states import UserDefinedStates
+        from .acc.apartment import Apartment
+        from .acc.output_devices import OutputDevices
+
+        apartment_states = Apartment(apartment['id'], apartment['attributes'])
+        self._device_states.update(apartment_states.gather_state(last_change))
 
         user_defined_states = UserDefinedStates(apartment_status['userDefinedStates'])
         self._device_states.update(user_defined_states.gather_state(last_change))
 
         output_devices = OutputDevices(apartment_status['dsDevices'])
-        self._device_states.update(output_devices.gather_state(last_change, self._submodules))
+        self._device_states.update(output_devices.gather_state(last_change))
 
         for device in zones_status:
-            if self.get_zone(device['id']) and 'attributes' in device and 'measurements' in device['attributes']:
+            if 'attributes' in device and 'measurements' in device['attributes']:
                 _dsuid = generate_dsuid(device['id'])
                 _states = {}
                 zone_attributes = ({v['id']: v for v in zones_status}).get(device['id'])['attributes']
@@ -79,15 +65,35 @@ class DssCollector(object):
 
         return self._device_states
 
-    def get_device_state(self, entity_id: str):
-        return self._device_states[entity_id]
 
-    def get_entities(self):
+class DssCollector(object):
+    """ Class to structure dS device and hold information of devices """
+
+    def __init__(self):
+        self.apartment_data = None
+        self._zones = {}
+        self._apartment = {}
+        self._measurements = {}
+        self.collected_zone = {}
+
+        # TODO: imports have to be restructured
+        self._devices = {}
+        self._function_blocks = {}
+        self._user_defined_states = {}
+        self._submodules = {}
+
+        self.load_apartment_data()
+
+    def load_apartment_data(self):
+        self.apartment_data = collect_data("/", params={
+            "include": "dsDevices,functionBlocks,userDefinedStates,submodules,zones"})
         self._devices = self.apartment_data['included']['dsDevices']
         self._function_blocks = self.apartment_data['included']['functionBlocks']
         self._user_defined_states = self.apartment_data['included']['userDefinedStates']
         self._submodules = self.apartment_data['included']['submodules']
+        self._transform_zones(self.apartment_data['included']['zones'])
 
+    def get_entities(self):
         _devices = self._transform_output_devices() + \
                    self._transform_user_defined_states() + \
                    self._transform_measurements() + \
@@ -95,69 +101,25 @@ class DssCollector(object):
 
         return _devices
 
+    def get_devices(self):
+        return self._devices
+
     def get_zone(self, zoneid: int):
         return ({int(v['id']): v for v in self._zones}).get(int(zoneid))
 
+    def get_device_application(self, device_id):
+        return ({v['id']: v['attributes']['application'] for v in self._submodules}).get(device_id)
+
+    def get_device_function_attributes(self, device_id):
+        return ({v['id']: v['attributes'] for v in self._function_blocks}).get(device_id)
+
     def _transform_output_devices(self):
-        _devices = []
-        for device in self._devices:
-            device_chars = []
-            device_mode = ""
-            device_support = {}
-
-            function_attributes = ({v['id']: v['attributes'] for v in self._function_blocks}).get(device['id'])
-            application = ({v['id']: v['attributes']['application'] for v in self._submodules}).get(device['id'])
-
-            _technical_name = function_attributes['technicalName']
-
-            if 'outputs' in function_attributes:
-                functions = {str(v['id']): v['attributes'] for v in function_attributes['outputs']}
-
-                if _technical_name in DEVICE_SUPPORT:
-                    for _attr in DEVICE_SUPPORT[_technical_name]['support']:
-                        device_support[_attr] = True
-                else:
-                    if application == "lights":
-                        if 'brightness' in functions:
-                            device_support['brightness'] = True if functions['brightness'][
-                                                                       'mode'] == 'gradual' else False
-
-                        device_support['colortemp'] = True if 'colortemp' in functions else False
-
-                        if 'hue' in functions:
-                            device_support['color'] = True
-                            device_support['hue'] = True if function_attributes[
-                                                                'technicalName'] in HUE_DEVICES else False
-
-                        else:
-                            device_support['color'] = False
-
-                if application == "shades":
-                    for chars in function_attributes['outputs']:
-                        if chars['id'] in ['shadePositionOutside']:
-                            device_chars = DEVICES_CHARS[application][chars['attributes']['mode']]
-                        device_mode = chars['attributes']['mode']
-
-                zone = self.get_zone(device['attributes']['zone'])['name']
-                d = {
-                    "entity_id": device['id'] + "." + application,
-                    "dsuid": device['id'],
-                    "name": zone + " " + device['attributes']['name'],
-                    "present": device['attributes']['present'],
-                    "zoneid": device['attributes']['zone'],
-                    "zone": zone,
-                    "chars": device_chars,
-                    "mode": device_mode,
-                    "application": application,
-                    "service": application,
-                    "support": device_support,
-                    "model": function_attributes['technicalName']
-                }
-                _devices.append(d)
-        return _devices
+        from .acc.output_devices import OutputDevices
+        output_devices = OutputDevices(self._devices)
+        return output_devices.entities()
 
     def _transform_measurements(self):
-        zones_status = self.collect_data("/zones/status")
+        zones_status = collect_data("/zones/status")
         _measurements = []
 
         for zone in zones_status:
@@ -181,14 +143,14 @@ class DssCollector(object):
         return _measurements
 
     def _transform_user_defined_states(self):
-        from .acc import UserDefinedStates
+        from .acc.user_defined_states import UserDefinedStates
         data = self._user_defined_states
         user_defined_states = UserDefinedStates(data)
         return user_defined_states.get_entities()
 
     def _transform_apartment(self):
-        from .acc import Apartment
-        data = self.collect_data("/status")
+        from .acc.apartment import Apartment
+        data = collect_data("/status")
         apartment = Apartment(data['id'], data['attributes'])
         return apartment.get_entities()
 

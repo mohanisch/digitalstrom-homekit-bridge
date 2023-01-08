@@ -29,6 +29,7 @@ ATTR_BRIGHTNESS = "brightness"
 ATTR_HUE = "hue"
 ATTR_COLOR = "color"
 ATTR_COLORTEMP = "colortemp"
+ATTR_SATURATION = "saturation"
 ATTR_HS_COLOR = "hs_color"
 ATTR_COLOR_MODE = "color_mode"
 ATTR_SHADE_POSITION_OUTSIDE = "shadePositionOutside"
@@ -70,6 +71,13 @@ CONTROL = {
         "device": {
             0: STATE_INACTIVE,
             1: STATE_ACTIVE
+        }
+    },
+    "joker": {
+        "id": "active",
+        "device_scene": {
+            0: STATE_OFF,
+            1: STATE_ON
         }
     },
 }

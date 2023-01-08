@@ -5,9 +5,9 @@ import time
 
 import websocket
 
+from .. import state_collector, device_collector
 from ...config import read_config_file as c, args
 from ...helper import remove_control_characters
-from ...homekit import collector
 
 
 def start_websocket():
@@ -39,16 +39,12 @@ class DsWebsocket(object):
         if "arguments" in _message:
             if _message['arguments'][0]['type'] == 'apartmentStatusChanged':
                 logging.debug("Apartment status changed")
-
-                collector.gather_devices_status()
+                state_collector.gather_devices_status()
 
             if _message['arguments'][0]['type'] == 'apartmentStructureChanged':
                 logging.debug("Apartment structure changed")
+                device_collector.load_apartment_data()
 
-                # TODO: Homekit has ti be restarted
-                # homekit.stop()
-                time.sleep(2)
-                # _thread.start_new_thread(run_homekit, ())
 
     @staticmethod
     def on_open(ws):

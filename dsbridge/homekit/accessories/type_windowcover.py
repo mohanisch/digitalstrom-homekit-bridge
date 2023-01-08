@@ -1,15 +1,15 @@
 """Class to hold all cover accessories."""
 import logging
 from pyhap.const import CATEGORY_WINDOW_COVERING
-from . import event_decider
-from .const import CHAR_HOLD_POSITION, CHAR_TARGET_HORIZONTAL_TILT_ANGLE, CHAR_CURRENT_HORIZONTAL_TILT_ANGLE, \
+from dsbridge.homekit import event_decider
+from dsbridge.homekit.const import CHAR_HOLD_POSITION, CHAR_TARGET_HORIZONTAL_TILT_ANGLE, CHAR_CURRENT_HORIZONTAL_TILT_ANGLE, \
     CHAR_CURRENT_POSITION, CHAR_TARGET_POSITION, CHAR_POSITION_STATE, ATTR_SHADE_POSITION_OUTSIDE
-from ..homekit import collector
-from ..homekit.accessories import TYPES, DsAccessory
-from ..helper import threaded
+from dsbridge.homekit import state_collector
+from dsbridge.homekit.accessories import ACC_TYPES, DsAccessory
+from dsbridge.helper import threaded
 
 
-@TYPES.register("WindowCovering")
+@ACC_TYPES.register("WindowCovering")
 class WindowsCovering(DsAccessory):
     def __init__(self, *args):
         super().__init__(*args, category=CATEGORY_WINDOW_COVERING)
@@ -80,7 +80,7 @@ class WindowsCovering(DsAccessory):
 
     @DsAccessory.run_at_interval(3)
     async def run(self):
-        device_services = collector.get_device_state(self.entity_id)
+        device_services = state_collector.get_device_state(self.entity_id)
 
         for attr, values in device_services['states'].items():
             if attr == ATTR_SHADE_POSITION_OUTSIDE:
