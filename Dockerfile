@@ -15,7 +15,7 @@ RUN apk add --no-cache \
 
 COPY . /tmp
 WORKDIR /tmp
-RUN python3 setup.py install \
+RUN pip3 install . \
     && rm -rf /tmp/*
 
 WORKDIR /data
