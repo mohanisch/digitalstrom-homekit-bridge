@@ -1,9 +1,20 @@
 ARG ARCH=
-FROM ${ARCH}registry.gitlab.com/mfsh/docker/python:1.0.0
+FROM ${ARCH}alpine:3.16
+
+RUN apk add --no-cache \
+      python3 \
+      gcc \
+      py3-pip \
+      python3-dev \
+      py3-cryptography \
+      py3-gevent \
+      musl-dev \
+      avahi-tools \
+      avahi-compat-libdns_sd \
+    && pip3 install --upgrade pip
 
 COPY . /tmp
 WORKDIR /tmp
-RUN apk add --no-cache avahi-tools avahi-compat-libdns_sd
 RUN python3 setup.py install \
     && rm -rf /tmp/*
 
