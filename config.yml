@@ -7,5 +7,47 @@ entities:
   service: switch
   support: null
   zone: Apartment
+- application: lights
+  chars: []
+  dsuid: 302ed89f43f0000000000580000d7e9200
+  entity_id: 302ed89f43f0000000000580000d7e9200.lights
+  mode: ''
+  model: GE-SDS200-CW
+  name: Arbeitszimmer Tischlampe
+  present: true
+  service: lights
+  support:
+    brightness: true
+    color: false
+    colortemp: false
+    saturation: false
+  zone: Arbeitszimmer
+  zoneid: '28313'
+- application: lights
+  chars: []
+  dsuid: 303505d7f800000000000080000460ba00
+  entity_id: 303505d7f800000000000080000460ba00.lights
+  mode: ''
+  model: GE-TKM210
+  name: Arbeitszimmer Deckenlampe
+  present: true
+  service: lights
+  support:
+    brightness: true
+    color: false
+    colortemp: false
+    saturation: false
+  zone: Arbeitszimmer
+  zoneid: '28313'
 token: d2bb3b9ea966eda61c19cae31ecf5d2a8c12d68ccce2032f33a36502fe446d43
-zones: []
+zones:
+- applications:
+    audio:
+    - 29d0a69c02e3576980737cf3513280ed00
+    lights:
+    - 302ed89f43f0000000000580000d7e9200
+    - 303505d7f800000000000080000460ba00
+    - 2be3b8be475c514080b2cb89c97354d100
+    shades:
+    - 3504175fe0000000000000000008762e00
+  id: '28313'
