@@ -1,102 +1,11 @@
 entities:
-- application: lights
-  chars: []
-  dsuid: 2be3b8be475c514080b2cb89c97354d100
-  entity_id: 2be3b8be475c514080b2cb89c97354d100.lights
-  mode: ''
-  model: 'Extended color light: TS0505A'
-  name: Arbeitszimmer Monitor
-  present: true
-  service: lights
-  support:
-    brightness: true
-    color: true
-    colortemp: true
-    hue: false
-    saturation: true
-  zone: Arbeitszimmer
-  zoneid: '28313'
-- application: lights
-  chars: []
-  dsuid: 302ed89f43f0000000000580000d7e9200
-  entity_id: 302ed89f43f0000000000580000d7e9200.lights
-  mode: ''
-  model: GE-SDS200-CW
-  name: Arbeitszimmer Tischlampe
-  present: true
-  service: lights
-  support:
-    brightness: true
-    color: false
-    colortemp: false
-    saturation: false
-  zone: Arbeitszimmer
-  zoneid: '28313'
-- application: lights
-  chars: []
-  dsuid: 303505d7f800000000000080000460ba00
-  entity_id: 303505d7f800000000000080000460ba00.lights
-  mode: ''
-  model: GE-TKM210
-  name: Arbeitszimmer Deckenlampe
-  present: true
-  service: lights
-  support:
-    brightness: true
-    color: false
-    colortemp: false
-    saturation: false
-  zone: Arbeitszimmer
-  zoneid: '28313'
-- application: shades
-  chars:
-  - CurrentPosition
-  - TargetPosition
-  - PositionState
-  dsuid: 3504175fe0000000000000000008762e00
-  entity_id: 3504175fe0000000000000000008762e00.shades
-  mode: positional
-  model: GR-KL200
-  name: Arbeitszimmer Rollo
-  present: true
-  service: shades
-  support: {}
-  zone: Arbeitszimmer
-  zoneid: '28313'
-- application: lights
-  chars: []
-  dsuid: 00232b51b26b5f76803cd67d51400a7300
-  entity_id: 00232b51b26b5f76803cd67d51400a7300.lights
-  mode: ''
-  model: 'Extended color light: LCA001'
-  name: Kinderzimmer Kugellampe
-  present: true
-  service: lights
-  support:
-    brightness: true
-    color: true
-    colortemp: true
-    hue: true
-    saturation: true
-  zone: Kinderzimmer
-  zoneid: '27135'
+- application: absent
+  chars: null
+  dsuid: apartmentAbsents
+  entity_id: 6bc23675c24a38eba40060e7155fef3500.switch
+  name: Abwesend
+  service: switch
+  support: null
+  zone: Apartment
 token: d2bb3b9ea966eda61c19cae31ecf5d2a8c12d68ccce2032f33a36502fe446d43
-zones:
-- applications:
-    audio:
-    - 29d0a69c02e3576980737cf3513280ed00
-    lights:
-    - 302ed89f43f0000000000580000d7e9200
-    - 303505d7f800000000000080000460ba00
-    - 2be3b8be475c514080b2cb89c97354d100
-    shades:
-    - 3504175fe0000000000000000008762e00
-  id: '28313'
-- applications:
-    joker: []
-    lights:
-    - 303505d7f8000000000000400013784300
-    - 00232b51b26b5f76803cd67d51400a7300
-    - 3c685f3dd3345c76c0aa6ea53c38c34e00
-    shades: []
-  id: '27135'
+zones: []

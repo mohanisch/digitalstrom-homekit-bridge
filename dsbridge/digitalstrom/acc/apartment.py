@@ -13,7 +13,7 @@ class Apartment(object):
         _absent_state = self.data['access']['absent']
         _entity_id = _dsuid + ".switch"
         _apartment_states[_entity_id] = {
-            "state": "on" if _absent_state else "off",
+            "states": {"on": True if _absent_state else False},
             "last_change": timestamp
         }
 

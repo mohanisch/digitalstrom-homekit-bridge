@@ -99,8 +99,9 @@ def restart_bridge():
     import time
     stop_homekit()
     time.sleep(2.4)
-    # homekit.start()
     start_homekit()
+
+    return {"success": True}
 
 
 @http.route("/onboarding/<step>", methods=['GET'])
