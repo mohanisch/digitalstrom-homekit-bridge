@@ -4,6 +4,6 @@ dist/
 __pycache__/
 .idea/
 venv/
-*.state
+config.yml
+home.state
 playground.py
-/config.yml
