@@ -4,8 +4,8 @@ PyQRCode~=1.2.1
 fnvhash~=0.1.0
 websocket~=0.2.1
 websocket-client==1.4.2
-requests==2.28.1
 urllib3==1.26.13
+requests==2.28.1
 rgbxy
 PyYAML~=6.0
 Flask~=2.2.2

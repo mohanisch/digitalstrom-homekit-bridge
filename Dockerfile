@@ -4,10 +4,7 @@ FROM ${ARCH}registry.gitlab.com/mfsh/docker/python:1.0.0
 COPY . /tmp
 WORKDIR /tmp
 RUN apk add --no-cache avahi-tools avahi-compat-libdns_sd
-RUN pip3 install websocket websocket-client HAP-python[QRCode]==4.4.0 \
-    && python3 setup.py clean --all \
-    && python3 setup.py build \
-    && python3 setup.py install \
+RUN python3 setup.py install \
     && rm -rf /tmp/*
 
 WORKDIR /data
