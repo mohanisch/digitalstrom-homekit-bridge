@@ -22,7 +22,7 @@ class DsWebsocket(object):
         self.host = "ws://{0}:{1}/api/v1/apartment/notifications".format(args.dss_hostname, args.ws_port)
 
     def start(self):
-        websocket.enableTrace(False)
+        # websocket.enableTrace(False)
         ws = websocket.WebSocketApp(
             self.host,
             on_open=self.on_open,
