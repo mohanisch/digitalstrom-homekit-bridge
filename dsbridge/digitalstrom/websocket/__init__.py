@@ -38,11 +38,11 @@ class DsWebsocket(object):
         _message = json.loads(remove_control_characters(message))
         if "arguments" in _message:
             if _message['arguments'][0]['type'] == 'apartmentStatusChanged':
-                logging.debug("Apartment status changed")
+                logging.info("Apartment status changed")
                 state_collector.gather_devices_status()
 
             if _message['arguments'][0]['type'] == 'apartmentStructureChanged':
-                logging.debug("Apartment structure changed")
+                logging.info("Apartment structure changed")
                 device_collector.load_apartment_data()
 
 
