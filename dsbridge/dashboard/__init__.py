@@ -7,7 +7,6 @@ from waitress import serve
 
 from .. import config
 from ..helper import write_config
-from ..digitalstrom import device_collector, state_collector
 
 http = Flask(__name__)
 http.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
@@ -17,10 +16,12 @@ http.jinja_env.auto_reload = True
 
 @http.route("/")
 def main():
+
     c = config.read_config_file()
     if 'token' not in c:
         return redirect("/onboarding/start", code=302)
     else:
+        from ..digitalstrom import state_collector
         entities = config.read_config_file()['entities']
         states = state_collector.gather_devices_status()
 
@@ -46,6 +47,8 @@ def homekit_state():
 
 @http.route("/save-devices", methods=['POST'])
 def save_devices():
+    from ..digitalstrom import device_collector
+
     request_data = request.get_json()
 
     devices = request_data['devices']
@@ -80,6 +83,7 @@ def save_devices():
 @http.route("/api/requesttoken", methods=['GET', 'POST'])
 def requesttoken():
     from ..digitalstrom.helper import create_application_token
+
     response = None
     if request.method == 'POST':
         """modify/update the information for <user_id>"""
@@ -122,15 +126,18 @@ def onboarding(step):
             'onboarding_main.html'
         )
     if step == 'devices':
+        from ..digitalstrom import device_collector
+
         from ..helper import read_config
         entities = device_collector.get_entities()
         cur_config = read_config(config.args.config_path + '/config.yml')
-
+        print(entities)
         res = {}
         for item in entities:
-            item.update({
-                'configured': any(item['entity_id'] in d['entity_id'] for d in cur_config['entities'])
-            })
+            if "entities" in cur_config:
+                item.update({
+                    'configured': any(item['entity_id'] in d['entity_id'] for d in cur_config['entities'])
+                })
             res.setdefault(item['zone'], []).append(item)
 
         return render_template(
