@@ -19,6 +19,6 @@ setup(
         "console_scripts": [
             "dsbridge = dsbridge.__main__:main",
         ]
-    }
+    },
     zip_safe=False
 )
