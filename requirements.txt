@@ -1,4 +1,4 @@
-HAP-python[QRCode]==4.7.0
+HAP-python[QRCode]==4.4.0
 setuptools==68.0.0
 PyQRCode~=1.2.1
 fnvhash~=0.1.0
