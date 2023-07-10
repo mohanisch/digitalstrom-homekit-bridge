@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       avahi-utils \
       libavahi-compat-libdnssd-dev \
       python3-venv \
+      python3-cffi \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -28,4 +29,4 @@ RUN pip3 install -r requirements.txt \
 WORKDIR /data
 
 EXPOSE 8081
-ENTRYPOINT ["/usr/bin/dsbridge"]
+ENTRYPOINT ["/opt/venv/bin/dsbridge"]
