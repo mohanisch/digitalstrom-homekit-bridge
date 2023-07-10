@@ -10,13 +10,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       musl-dev \
       avahi-utils \
       libavahi-compat-libdnssd-dev \
-      python3.11-venv \
+      python3-venv \
     && apt-get clean \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip3 install --upgrade pip
+    && rm -rf /var/lib/apt/lists/*
 
 COPY . /tmp
 WORKDIR /tmp
+
+RUN python3 -m venv /opt/venv
+
+ENV PATH="/opt/venv/bin:$PATH"
+
 RUN pip3 install -r requirements.txt \
     && pip3 install . \
     && rm -rf /tmp/*
