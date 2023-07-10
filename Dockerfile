@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libavahi-compat-libdnssd-dev \
       python3-venv \
       python3-cffi \
+      build-essential libssl-dev libffi-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
