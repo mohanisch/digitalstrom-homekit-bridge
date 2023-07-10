@@ -1,17 +1,18 @@
 ARG ARCH=
-FROM ${ARCH}alpine:3.16
+FROM ${ARCH}rust:slim-bookworm
 
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
       python3 \
-      gcc \
-      py3-pip \
+      python3-pip \
       python3-dev \
-      py3-cryptography \
-      py3-gevent \
+      python3-cryptography \
+      python3-gevent \
       musl-dev \
-      avahi-tools \
-      avahi-compat-libdns_sd \
-    && curl https://sh.rustup.rs -sSf | sh \
+      avahi-utils \
+      libavahi-compat-libdnssd-dev \
+      python3.11-venv \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
     && pip3 install --upgrade pip
 
 COPY . /tmp
