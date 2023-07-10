@@ -11,7 +11,6 @@ RUN apk add --no-cache \
       musl-dev \
       avahi-tools \
       avahi-compat-libdns_sd \
-    && curl https://sh.rustup.rs -sSf | sh \
     && pip3 install --upgrade pip
 
 COPY . /tmp
