@@ -1,16 +1,13 @@
-ARG ARCH=
-FROM ${ARCH}alpine:3.16
+FROM python:3.11
 
-RUN apk add --no-cache \
-      python3 \
+RUN apt-get update && apt-get install -y \
       gcc \
-      py3-pip \
-      python3-dev \
-      py3-cryptography \
-      py3-gevent \
+      python3-cryptography \
+      python3-gevent \
       musl-dev \
-      avahi-tools \
-      avahi-compat-libdns_sd \
+      avahi-utils \
+      libavahi-compat-libdnssd-dev \
+    && rm -rf /var/lib/apt/lists/* \
     && pip3 install --upgrade pip
 
 COPY . /tmp
@@ -22,4 +19,4 @@ RUN pip3 install -r requirements.txt \
 WORKDIR /data
 
 EXPOSE 8081
-ENTRYPOINT ["/usr/bin/dsbridge"]
+ENTRYPOINT ["/usr/local/bin/dsbridge"]
