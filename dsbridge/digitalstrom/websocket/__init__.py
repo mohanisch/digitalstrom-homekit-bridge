@@ -1,10 +1,7 @@
 import _thread
 import json
 import logging
-import time
-
 import websocket
-
 from .. import state_collector, device_collector
 from ...config import read_config_file as c, args
 from ...helper import remove_control_characters
@@ -22,7 +19,7 @@ class DsWebsocket(object):
         self.host = "ws://{0}:{1}/api/v1/apartment/notifications".format(args.dss_hostname, args.ws_port)
 
     def start(self):
-        # websocket.enableTrace(False)
+        websocket.enableTrace(False)
         ws = websocket.WebSocketApp(
             self.host,
             on_open=self.on_open,
