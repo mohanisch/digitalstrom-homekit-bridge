@@ -7,7 +7,7 @@ with io.open("README.md", "rt", encoding="utf8") as f:
 
 setup(
     name="dsbridge",
-    version="2.1.1",
+    version="2.1.2",
     url="",
     maintainer="Marco Hanisch",
     maintainer_email="marco.hanisch@webkompleks.de",

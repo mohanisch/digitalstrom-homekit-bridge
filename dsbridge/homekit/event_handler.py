@@ -15,7 +15,7 @@ def get_entity_by_aid(aid: int):
     return entity_id
 
 
-class EventDecider(object):
+class EventDecider:
     def __init__(self):
         self.hap_events = None
         self.device_events = {}
@@ -27,10 +27,10 @@ class EventDecider(object):
         for event in events:
             if 'ev' in event:
                 continue
-            else:
-                entity_id = get_entity_by_aid(event['aid'])
-                _events[entity_id] = {}
-                self.hap_events = list(dict.fromkeys(_events))
+
+            entity_id = get_entity_by_aid(event['aid'])
+            _events[entity_id] = {}
+            self.hap_events = list(dict.fromkeys(_events))
 
     def device_event(
             self,
@@ -87,7 +87,7 @@ class EventDecider(object):
                                 if _application and a['application'] == _application:
                                     _v.append(_value)
                                     _v.sort()
-                        _zone_scene = True if _v[0] in (0, 100) else False
+                        _zone_scene = _v[0] in (0, 100)
                         if not _zone_scene:
                             _event_type = "device"
                         else:

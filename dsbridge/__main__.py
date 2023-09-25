@@ -1,7 +1,7 @@
 import _thread
 import sys
 import threading
-from time import sleep
+import time
 
 from .dashboard import run_server
 from .const import REQUIRED_PYTHON_VER
@@ -31,7 +31,7 @@ def check_threads() -> None:
 def start_websocket():
     from .config import read_config_file
     while True:
-        sleep(2)
+        time.sleep(2)
         c = read_config_file()
         if 'token' in c and c['token']:
             from .digitalstrom.websocket import start_websocket
@@ -42,7 +42,7 @@ def start_websocket():
 def start_homekit():
     from .config import read_config_file
     while True:
-        sleep(2)
+        time.sleep(2)
         c = read_config_file()
 
         if 'entities' in c:

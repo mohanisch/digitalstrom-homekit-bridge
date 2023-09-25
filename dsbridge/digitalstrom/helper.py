@@ -27,7 +27,8 @@ def create_application_token(password):
         application_token = requests.get(
             "https://" + host + "/" + SYSTEM_API + '/requestApplicationToken',
             params=application_token_param,
-            verify=False
+            verify=False,
+            timeout=5
         ).json()
 
         param = {"applicationToken": application_token['result']['applicationToken']}
@@ -36,7 +37,8 @@ def create_application_token(password):
             "https://" + host + "/" + SYSTEM_API + '/enableToken',
             headers=headers,
             params=param,
-            verify=False
+            verify=False,
+            timeout=5
         ).json()
         enable_application_token['token'] = application_token['result']['applicationToken']
         result = enable_application_token

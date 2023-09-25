@@ -5,7 +5,7 @@ from .const import SMART_HOME_API
 from ..helper import threaded
 
 
-class EventPatcher(object):
+class EventPatcher:
     def __init__(self):
         from ..config import args, read_config_file as config_file
         config_file = config_file()

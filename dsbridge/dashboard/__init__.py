@@ -1,10 +1,12 @@
 from io import BytesIO
 
 import base36
-from flask import Flask, render_template, redirect, request
+import prometheus_client
+from flask import Flask, render_template, redirect, request, Response
 from pyqrcode import QRCode
 from waitress import serve
 
+from metrics import REQUESTS, SYSTEM_USAGE
 from .. import config
 from ..helper import write_config
 
@@ -16,25 +18,35 @@ http.jinja_env.auto_reload = True
 
 @http.route("/")
 def main():
-
+    REQUESTS.inc()
     c = config.read_config_file()
     if 'token' not in c:
         return redirect("/onboarding/start", code=302)
-    else:
-        from ..digitalstrom import state_collector
-        entities = config.read_config_file()['entities']
-        states = state_collector.gather_devices_status()
 
-        res = {}
-        for item in entities:
-            if item['entity_id'] in states:
-                item.update({"state": states[item['entity_id']]})
-            res.setdefault(item['zone'], []).append(item)
+    from ..digitalstrom import state_collector
+    entities = config.read_config_file()['entities']
+    states = state_collector.gather_devices_status()
 
-        return render_template(
-            'dashboard_main.html',
-            entities=res
-        )
+    res = {}
+    for item in entities:
+        if item['entity_id'] in states:
+            item.update({"state": states[item['entity_id']]})
+        res.setdefault(item['zone'], []).append(item)
+
+    return render_template(
+        'dashboard_main.html',
+        entities=res
+    )
+
+
+@http.route("/metrics")
+def metrics():
+    content_type_latest = str('text/plain; version=0.0.4; charset=utf-8')
+
+    import psutil, os
+    SYSTEM_USAGE.labels('cpu_percent').set(psutil.Process(os.getpid()).cpu_percent())
+    SYSTEM_USAGE.labels('memory_usage').set(psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024)
+    return Response(prometheus_client.generate_latest(), mimetype=content_type_latest)
 
 
 @http.route("/homekit/state")

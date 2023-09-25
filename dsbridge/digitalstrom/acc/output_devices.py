@@ -15,7 +15,7 @@ def get_devices():
     return device_collector.get_devices()
 
 
-class OutputDevices(object):
+class OutputDevices:
 
     def __init__(self, data) -> None:
         super().__init__()
@@ -35,7 +35,7 @@ class OutputDevices(object):
                     targetvalue = state['targetValue'] if "targetValue" in state else 0
 
                     if state['id'] in ('brightness', 'powerState'):
-                        _states['on'] = True if value > 0 else False
+                        _states['on'] = bool(value)
 
                     _states[state['id']] = {
                         "value": value,
@@ -72,14 +72,14 @@ class OutputDevices(object):
                 # else:
                 if device_application == "lights":
                     if 'brightness' in functions:
-                        device_support['brightness'] = True if functions['brightness']['mode'] == 'gradual' else False
+                        device_support['brightness'] = functions['brightness']['mode'] == 'gradual'
 
-                    device_support['colortemp'] = True if 'colortemp' in functions else False
-                    device_support['saturation'] = True if 'saturation' in functions else False
+                    device_support['colortemp'] = 'colortemp' in functions
+                    device_support['saturation'] = 'saturation' in functions
 
                     if 'hue' in functions:
                         device_support['color'] = True
-                        device_support['hue'] = True if device_attributes['technicalName'] in HUE_DEVICES else False
+                        device_support['hue'] = device_attributes['technicalName'] in HUE_DEVICES
                     else:
                         device_support['color'] = False
 

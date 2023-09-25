@@ -1,7 +1,7 @@
 from ..helper import generate_dsuid
 
 
-class Apartment(object):
+class Apartment:
     def __init__(self, apartment_id, data):
         self.apartment_id = apartment_id
         self.data = data
@@ -13,7 +13,7 @@ class Apartment(object):
         _absent_state = self.data['access']['absent']
         _entity_id = _dsuid + ".switch"
         _apartment_states[_entity_id] = {
-            "states": {"on": True if _absent_state else False},
+            "states": {"on": bool(_absent_state)},
             "last_change": timestamp
         }
 

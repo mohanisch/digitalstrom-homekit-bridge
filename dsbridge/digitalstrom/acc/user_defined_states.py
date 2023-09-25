@@ -1,7 +1,7 @@
 from dsbridge.digitalstrom.helper import generate_dsuid
 
 
-class UserDefinedStates(object):
+class UserDefinedStates:
     def __init__(self, data):
         self.data = data
 
@@ -9,7 +9,7 @@ class UserDefinedStates(object):
         _user_defined_states = {}
         for user_state in self.data:
             _dsuid = generate_dsuid(user_state['id'])
-            _states = {"on": True if user_state['attributes']['status'] == "active" else False}
+            _states = {"on": user_state['attributes']['status'] == "active"}
             _user_defined_states[_dsuid + ".manualState"] = {
                 "states": _states,
                 "last_change": timestamp

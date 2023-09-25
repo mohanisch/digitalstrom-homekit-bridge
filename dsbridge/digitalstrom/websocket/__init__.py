@@ -2,6 +2,8 @@ import _thread
 import json
 import logging
 import websocket
+
+from metrics import WS_REQUESTS_CHANGE
 from .. import state_collector, device_collector
 from ...config import read_config_file as c, args
 from ...helper import remove_control_characters
@@ -14,9 +16,9 @@ def start_websocket():
         _thread.start_new_thread(dswebsocket.start, ())
 
 
-class DsWebsocket(object):
+class DsWebsocket:
     def __init__(self):
-        self.host = "ws://{0}:{1}/api/v1/apartment/notifications".format(args.dss_hostname, args.ws_port)
+        self.host = f"ws://{args.dss_hostname}:{args.ws_port}/api/v1/apartment/notifications"
 
     def start(self):
         websocket.enableTrace(False)
@@ -31,6 +33,7 @@ class DsWebsocket(object):
 
     @staticmethod
     def on_message(ws, message):
+        WS_REQUESTS_CHANGE.inc()
 
         _message = json.loads(remove_control_characters(message))
         if "arguments" in _message:

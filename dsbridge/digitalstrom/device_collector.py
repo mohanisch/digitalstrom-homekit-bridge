@@ -15,7 +15,7 @@ def collect_data(uri: str, api: str = SMART_HOME_API, params=None, key="data"):
     return _response
 
 
-class DssStateCollector(object):
+class DssStateCollector:
     def __init__(self):
         self._device_states = {}
 
@@ -66,7 +66,7 @@ class DssStateCollector(object):
         return self._device_states
 
 
-class DssCollector(object):
+class DssCollector:
     """ Class to structure dS device and hold information of devices """
 
     def __init__(self):
