@@ -69,26 +69,20 @@ class EventDecider:
             zone_devices = config.read_config_file()['zones']
             zones = ({v['id']: v for v in zone_devices})
 
-            for event_entity_id, event_entity_data in self.device_events.items():
+            for event_entity_data in self.device_events.values():
                 _zone_ids.append(event_entity_data["zoneid"])
                 _applications.append(event_entity_data["application"])
 
             for event_zoneid in list(set(_zone_ids)):
-                for app in list(set(_applications)):
+                for _application in list(set(_applications)):
                     _v = []
-                    _application = app
 
                     if _application in CONTROL and "zone_scene" in CONTROL[_application]:
-                        _d = []
-                        for entity_id, device in self.device_events.items():
-                            _d.append(device['dsuid'])
-
-                        _event_type = "zone" if all(
-                            elem in list(_d) for elem in
-                            zones[event_zoneid]['applications'][_application]) else "device"
+                        _d = list(value['dsuid'] for value in self.device_events.values())
+                        _event_type = "zone" if all(elem in list(_d) for elem in zones[event_zoneid]['applications'][_application]) else "device"
 
                     if _event_type == "zone":
-                        for entity_id, device in self.device_events.items():
+                        for device in self.device_events.values():
                             _value = device['attributes'][CONTROL[_application]['id']]
                             if device['zoneid'] == event_zoneid:
                                 if _application and device['application'] == _application:
@@ -103,26 +97,26 @@ class EventDecider:
                             self.event_patcher.patch_zone(zoneid, _application, action)
 
                     if _event_type == "device":
-                        for e, a in self.device_events.items():
-                            if a['application'] in ("absent", "manualState"):
-                                if _application and a['application'] == _application:
-                                    _value = a['attributes'][CONTROL[_application]['id']]
+                        for device in self.device_events.values():
+                            if device['application'] in ("absent", "manualState"):
+                                if _application and device['application'] == _application:
+                                    _value = device['attributes'][CONTROL[_application]['id']]
                                     self.event_patcher.patch_switch(
-                                        a['dsuid'], CONTROL[_application]['device'][_value]
+                                        device['dsuid'], CONTROL[_application]['device'][_value]
                                     )
                             else:
-                                if a['zoneid'] == zoneid:
-                                    if _application and a['application'] == _application:
-                                        if a['attributes'][CONTROL[_application]['id']] in CONTROL[_application][
+                                if device['zoneid'] == zoneid:
+                                    if _application and device['application'] == _application:
+                                        if device['attributes'][CONTROL[_application]['id']] in CONTROL[_application][
                                                 'device_scene'].keys():
-                                            _value = a['attributes'][CONTROL[_application]['id']]
+                                            _value = device['attributes'][CONTROL[_application]['id']]
                                             action = CONTROL[_application]['device_scene'][_value]
                                             self.event_patcher.patch_device_scenario(
-                                                a['dsuid'], action
+                                                device['dsuid'], action
                                             )
                                         else:
                                             self.event_patcher.patch_device_status(
-                                                a['dsuid'], a['attributes']
+                                                device['dsuid'], device['attributes']
                                             )
 
             self.clean_events()
