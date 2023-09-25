@@ -19,7 +19,7 @@ class EventDecider:
         self.hap_events = None
         self.device_events = {}
 
-        self.ep = event_patcher
+        self.event_patcher = event_patcher
 
     def receive_hap_event(self, events):
         _events = {}
@@ -60,12 +60,11 @@ class EventDecider:
             zone_devices = config.read_config_file()['zones']
             zones = ({v['id']: v for v in zone_devices})
 
-            for k, v in self.device_events.items():
-                _zone_ids.append(v["zoneid"])
-            for k, v in self.device_events.items():
-                _applications.append(v["application"])
+            for event_entity_id, event_entity_data in self.device_events.items():
+                _zone_ids.append(event_entity_data["zoneid"])
+                _applications.append(event_entity_data["application"])
 
-            for zoneid in list(set(_zone_ids)):
+            for event_zoneid in list(set(_zone_ids)):
                 for app in list(set(_applications)):
                     _v = []
                     _application = app
@@ -77,12 +76,12 @@ class EventDecider:
 
                         _event_type = "zone" if all(
                             elem in list(_d) for elem in
-                            zones[zoneid]['applications'][_application]) else "device"
+                            zones[event_zoneid]['applications'][_application]) else "device"
 
                     if _event_type == "zone":
                         for e, a in self.device_events.items():
                             _value = a['attributes'][CONTROL[_application]['id']]
-                            if a['zoneid'] == zoneid:
+                            if a['zoneid'] == event_zoneid:
                                 if _application and a['application'] == _application:
                                     _v.append(_value)
                                     _v.sort()
@@ -92,14 +91,14 @@ class EventDecider:
                             _event_type = "device"
                         else:
                             action = CONTROL[_application]['zone_scene'][_v[0]]
-                            self.ep.patch_zone(zoneid, _application, action)
+                            self.event_patcher.patch_zone(zoneid, _application, action)
 
                     if _event_type == "device":
                         for e, a in self.device_events.items():
                             if a['application'] in ("absent", "manualState"):
                                 if _application and a['application'] == _application:
                                     _value = a['attributes'][CONTROL[_application]['id']]
-                                    self.ep.patch_switch(
+                                    self.event_patcher.patch_switch(
                                         a['dsuid'], CONTROL[_application]['device'][_value]
                                     )
                             else:
@@ -109,11 +108,11 @@ class EventDecider:
                                                 'device_scene'].keys():
                                             _value = a['attributes'][CONTROL[_application]['id']]
                                             action = CONTROL[_application]['device_scene'][_value]
-                                            self.ep.patch_device_scenario(
+                                            self.event_patcher.patch_device_scenario(
                                                 a['dsuid'], action
                                             )
                                         else:
-                                            self.ep.patch_device_status(
+                                            self.event_patcher.patch_device_status(
                                                 a['dsuid'], a['attributes']
                                             )
 
