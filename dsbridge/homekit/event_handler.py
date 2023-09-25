@@ -1,3 +1,6 @@
+"""
+Event hanlder
+"""
 from .const import CONTROL
 from .. import config
 from ..digitalstrom import event_patcher
@@ -15,6 +18,11 @@ def get_entity_by_aid(aid: int):
 
 
 class EventDecider:
+    """
+    EventDecider is checking if the request can be
+    applied as a zone or as a device only scene. It is based
+    on the switched devices if they are in the same zone (dS) or not.
+    """
     def __init__(self):
         self.hap_events = None
         self.device_events = {}
@@ -22,6 +30,9 @@ class EventDecider:
         self.event_patcher = event_patcher
 
     def receive_hap_event(self, events):
+        """
+        Getting events from HAP
+        """
         _events = {}
         for event in events:
             if 'ev' in event:
@@ -31,14 +42,12 @@ class EventDecider:
             _events[entity_id] = {}
             self.hap_events = list(dict.fromkeys(_events))
 
-    def device_event(
-            self,
-            entity_id: str,
-            dsuid: str,
-            zoneid: int,
-            attributes: dict,
-            application: str = ""
-    ):
+    def device_event(self, entity_id: str, dsuid: str, zoneid: int, attributes: dict, application: str = ""):
+        """
+        This method is getting data from all switched devices and
+        compares it with data from dS to ensure if a zone scene can be applied or
+        only single device scene.
+        """
         _count_hap_events = len(self.hap_events)
         _count_device_events = 0
         _test_action = None
@@ -71,21 +80,21 @@ class EventDecider:
 
                     if _application in CONTROL and "zone_scene" in CONTROL[_application]:
                         _d = []
-                        for k, v in self.device_events.items():
-                            _d.append(v['dsuid'])
+                        for entity_id, device in self.device_events.items():
+                            _d.append(device['dsuid'])
 
                         _event_type = "zone" if all(
                             elem in list(_d) for elem in
                             zones[event_zoneid]['applications'][_application]) else "device"
 
                     if _event_type == "zone":
-                        for e, a in self.device_events.items():
-                            _value = a['attributes'][CONTROL[_application]['id']]
-                            if a['zoneid'] == event_zoneid:
-                                if _application and a['application'] == _application:
+                        for entity_id, device in self.device_events.items():
+                            _value = device['attributes'][CONTROL[_application]['id']]
+                            if device['zoneid'] == event_zoneid:
+                                if _application and device['application'] == _application:
                                     _v.append(_value)
                                     _v.sort()
-                        _zone_scene = all(0 == ele or ele == 100 for ele in _v)
+                        _zone_scene = all(ele in (0, 100) for ele in _v)
 
                         if not _zone_scene:
                             _event_type = "device"
