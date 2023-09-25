@@ -1,4 +1,3 @@
-
 from .const import CONTROL
 from .. import config
 from ..digitalstrom import event_patcher
@@ -87,7 +86,8 @@ class EventDecider:
                                 if _application and a['application'] == _application:
                                     _v.append(_value)
                                     _v.sort()
-                        _zone_scene = _v[0] in (0, 100)
+                        _zone_scene = all(0 == ele or ele == 100 for ele in _v)
+
                         if not _zone_scene:
                             _event_type = "device"
                         else:
@@ -106,7 +106,7 @@ class EventDecider:
                                 if a['zoneid'] == zoneid:
                                     if _application and a['application'] == _application:
                                         if a['attributes'][CONTROL[_application]['id']] in CONTROL[_application][
-                                            'device_scene'].keys():
+                                                'device_scene'].keys():
                                             _value = a['attributes'][CONTROL[_application]['id']]
                                             action = CONTROL[_application]['device_scene'][_value]
                                             self.ep.patch_device_scenario(
