@@ -19,8 +19,10 @@ logger = logging.getLogger(__name__)
 
 
 def get_accessory(driver, device, aid):
+    """
+    Take state and return an accessory object if supported.
+    """
     from . import type_lights, type_windowcover, type_sensors, type_switch, type_valve, type_speaker
-    """Take state and return an accessory object if supported."""
     a_type = None
 
     if device['service'] == "sprinkler":
@@ -65,6 +67,9 @@ def get_accessory(driver, device, aid):
 
 
 class DsAccessory(Accessory):
+    """
+    A representation of a HAP accessory
+    """
     def __init__(
         self,
         driver: DsAccessoryDriver,
@@ -211,10 +216,10 @@ class DsAccessoryDriver(AccessoryDriver):
 
     @pyhap_callback
     def pair(
-        self, client_uuid: UUID, client_public: str, client_permissions: int
+        self, client_username_bytes: bytes, client_public: bytes, client_permissions: bytes
     ) -> bool:
         """Override super function to dismiss setup message if paired."""
-        success = super().pair(client_uuid, client_public, client_permissions)
+        success = super().pair(client_username_bytes, client_public, client_permissions)
         if success:
             async_suppress_setup_message()
         return cast(bool, success)

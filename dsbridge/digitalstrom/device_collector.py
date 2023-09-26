@@ -1,6 +1,5 @@
-from .const import SMART_HOME_API
 import time
-
+from .const import SMART_HOME_API
 from .helper import generate_dsuid
 from .request_handler import RequestHandler
 from ..config import args, read_config_file as c
@@ -128,7 +127,7 @@ class DssCollector:
 
                 for measurement in zone['attributes']['measurements']:
                     _dsuid = generate_dsuid(zone['id'])
-                    m = {
+                    device = {
                         "entity_id": _dsuid + "." + measurement,
                         "dsuid": _dsuid,
                         "name": zone_name + " " + measurement,
@@ -139,7 +138,7 @@ class DssCollector:
                         "application": measurement,
                         "service": 'sensor',
                     }
-                    _measurements.append(m)
+                    _measurements.append(device)
         return _measurements
 
     def _transform_user_defined_states(self):

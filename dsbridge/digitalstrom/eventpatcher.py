@@ -1,3 +1,7 @@
+"""
+Event patcher
+
+"""
 import json
 import logging
 

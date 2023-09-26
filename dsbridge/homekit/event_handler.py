@@ -23,6 +23,7 @@ class EventDecider:
     applied as a zone or as a device only scene. It is based
     on the switched devices if they are in the same zone (dS) or not.
     """
+
     def __init__(self):
         self.hap_events = None
         self.device_events = {}
@@ -79,7 +80,8 @@ class EventDecider:
 
                     if _application in CONTROL and "zone_scene" in CONTROL[_application]:
                         _d = list(value['dsuid'] for value in self.device_events.values())
-                        _event_type = "zone" if all(elem in list(_d) for elem in zones[event_zoneid]['applications'][_application]) else "device"
+                        _event_type = "zone" if all(elem in list(_d) for elem in
+                                                    zones[event_zoneid]['applications'][_application]) else "device"
 
                     if _event_type == "zone":
                         for device in self.device_events.values():
@@ -88,13 +90,17 @@ class EventDecider:
                                 if _application and device['application'] == _application:
                                     _v.append(_value)
                                     _v.sort()
+
                         _zone_scene = all(ele in (0, 100) for ele in _v)
 
-                        if not _zone_scene:
-                            _event_type = "device"
-                        else:
+                        # If zone is true but values are 0 or 100 patch zone
+                        # otherwise fallback to single device control if all devices
+                        # in same zone but values != 0 or 100
+                        if _zone_scene:
                             action = CONTROL[_application]['zone_scene'][_v[0]]
                             self.event_patcher.patch_zone(zoneid, _application, action)
+                        else:
+                            _event_type = "device"
 
                     if _event_type == "device":
                         for device in self.device_events.values():
@@ -105,25 +111,18 @@ class EventDecider:
                                         device['dsuid'], CONTROL[_application]['device'][_value]
                                     )
                             else:
-                                if device['zoneid'] == zoneid:
-                                    if _application and device['application'] == _application:
-                                        if device['attributes'][CONTROL[_application]['id']] in CONTROL[_application][
-                                                'device_scene'].keys():
-                                            _value = device['attributes'][CONTROL[_application]['id']]
-                                            action = CONTROL[_application]['device_scene'][_value]
-                                            self.event_patcher.patch_device_scenario(
-                                                device['dsuid'], action
-                                            )
-                                        else:
-                                            self.event_patcher.patch_device_status(
-                                                device['dsuid'], device['attributes']
-                                            )
+                                if device['zoneid'] == zoneid and _application and device['application'] == _application:
+                                    if device['attributes'][CONTROL[_application]['id']] in CONTROL[_application][
+                                            'device_scene'].keys():
+                                        _value = device['attributes'][CONTROL[_application]['id']]
+                                        action = CONTROL[_application]['device_scene'][_value]
+                                        self.event_patcher.patch_device_scenario(
+                                            device['dsuid'], action
+                                        )
+                                    else:
+                                        self.event_patcher.patch_device_status(
+                                            device['dsuid'], device['attributes']
+                                        )
 
-            self.clean_events()
-
-    def _action(self, action):
-        return all(value['action'] == action for value in self.device_events.values())
-
-    def clean_events(self):
-        self.hap_events = None
-        self.device_events = {}
+            self.hap_events = None
+            self.device_events = {}

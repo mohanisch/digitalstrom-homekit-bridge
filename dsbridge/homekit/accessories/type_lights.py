@@ -16,6 +16,54 @@ from ..const import (
 )
 from .. import event_decider
 from ...digitalstrom import state_collector
+from rgbxy import Converter
+
+
+def hsv_to_rgb(hue, saturation, value):
+    """
+    This function takes
+     hue - 0 - 360 Deg
+     s - 0 - 100 %
+     v - 0 - 100 %
+    """
+
+    h_pri = hue / 60
+    _saturation = saturation / 100
+    _value = value / 100
+
+    if saturation <= 0.0:
+        return int(0), int(0), int(0)
+
+    chroma = _value * _saturation  # Chroma
+    X = chroma * (1 - abs(h_pri % 2 - 1))
+
+    rgb_pri = [0.0, 0.0, 0.0]
+
+    if 0 <= h_pri <= 1:
+        rgb_pri = [chroma, X, 0]
+    elif 1 <= h_pri <= 2:
+        rgb_pri = [X, chroma, 0]
+    elif 2 <= h_pri <= 3:
+        rgb_pri = [0, chroma, X]
+    elif 3 <= h_pri <= 4:
+        rgb_pri = [0, X, chroma]
+    elif 4 <= h_pri <= 5:
+        rgb_pri = [X, 0, chroma]
+    elif 5 <= h_pri <= 6:
+        rgb_pri = [chroma, 0, X]
+    else:
+        rgb_pri = [0, 0, 0]
+
+    m = _value - chroma
+
+    return int((rgb_pri[0] + m) * 255), int((rgb_pri[1] + m) * 255), int((rgb_pri[2] + m) * 255)
+
+
+def get_xy(h, s, v):
+    rgb = hsv_to_rgb(h, s, v)
+    converter = Converter()
+    xy = converter.rgb_to_xy(rgb[0], rgb[1], rgb[2])
+    return xy[0], xy[1]
 
 
 @ACC_TYPES.register("Light")
@@ -80,13 +128,13 @@ class Light(DsAccessory):
 
         _attributes = {}
 
-        for char, value in char_values.items():
+        for char in char_values.keys():
             if char == "Hue":
                 if self.support['hue']:
                     _attributes.update({'hue': self.char_hue.value})
                 else:
                     if self.brightness > 0:
-                        self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
+                        self.xy = get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
                         _attributes.update({'x': self.xy[0]})
                         _attributes.update({'y': self.xy[1]})
             if char == "ColorTemperature":
@@ -115,52 +163,6 @@ class Light(DsAccessory):
     def set_saturation(self, value):
         self.saturation = value
         self.set_hue(self.hue)
-
-    def hsv_to_rgb(self, h, s, v):
-        """
-        This function takes
-         h - 0 - 360 Deg
-         s - 0 - 100 %
-         v - 0 - 100 %
-        """
-
-        hPri = h / 60
-        s = s / 100
-        v = v / 100
-
-        if s <= 0.0:
-            return int(0), int(0), int(0)
-
-        C = v * s  # Chroma
-        X = C * (1 - abs(hPri % 2 - 1))
-
-        RGB_Pri = [0.0, 0.0, 0.0]
-
-        if 0 <= hPri <= 1:
-            RGB_Pri = [C, X, 0]
-        elif 1 <= hPri <= 2:
-            RGB_Pri = [X, C, 0]
-        elif 2 <= hPri <= 3:
-            RGB_Pri = [0, C, X]
-        elif 3 <= hPri <= 4:
-            RGB_Pri = [0, X, C]
-        elif 4 <= hPri <= 5:
-            RGB_Pri = [X, 0, C]
-        elif 5 <= hPri <= 6:
-            RGB_Pri = [C, 0, X]
-        else:
-            RGB_Pri = [0, 0, 0]
-
-        m = v - C
-
-        return int((RGB_Pri[0] + m) * 255), int((RGB_Pri[1] + m) * 255), int((RGB_Pri[2] + m) * 255)
-
-    def get_xy(self, h, s, v):
-        from rgbxy import Converter
-        rgb = self.hsv_to_rgb(h, s, v)
-        converter = Converter()
-        xy = converter.rgb_to_xy(rgb[0], rgb[1], rgb[2])
-        return xy[0], xy[1]
 
     @DsAccessory.run_at_interval(3)
     async def run(self):
