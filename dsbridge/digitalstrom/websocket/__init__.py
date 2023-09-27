@@ -3,7 +3,7 @@ import json
 import logging
 import websocket
 
-from metrics import WS_REQUESTS_CHANGE
+from dsbridge.metrics import WS_REQUESTS_CHANGE
 from .. import state_collector, device_collector
 from ...config import read_config_file as c, args
 from ...helper import remove_control_characters

@@ -1,16 +1,17 @@
+"""
+Homekit module which handles homekit relate stuff
+"""
 from __future__ import annotations
 
 import _thread
 import logging
 
-from .event_handler import EventDecider
-from .. import config
-
-from .accessories import get_accessory, DsAccessoryDriver, DsBridge
-from .aid_manager import AccessoryAidStorage
-from .util import async_show_setup_message
-from ..const import STATUS_READY
-from ..digitalstrom import state_collector
+from dsbridge import config
+from dsbridge.const import STATUS_READY
+from dsbridge.homekit.accessories import DsAccessoryDriver, DsBridge, get_accessory
+from dsbridge.homekit.aid_manager import AccessoryAidStorage
+from dsbridge.homekit.event_handler import EventDecider
+from dsbridge.digitalstrom import state_collector
 
 
 def start_homekit():
@@ -30,19 +31,17 @@ def start_homekit():
 
 
 def stop_homekit():
+    """
+    Stop homekit implementation
+    """
     logging.info("Stopping homekit...")
     homekit.stop()
 
 
-def get_aid_by_dsuid(dsuid: str):
-    """Returns aid by given dsuid"""
-    aid = None
-    if dsuid in homekit.aid_storage.allocations.keys():
-        aid = homekit.aid_storage.allocations[dsuid]
-    return aid
-
-
 class HomeKit:
+    """
+    Homekit class
+    """
     def __init__(
             self,
             name,

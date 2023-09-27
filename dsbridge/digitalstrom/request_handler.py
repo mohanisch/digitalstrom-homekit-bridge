@@ -1,7 +1,7 @@
 import requests
 import urllib3
 
-from metrics import REQUEST_TIME, request_counter
+from dsbridge.metrics import REQUEST_TIME, request_counter
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 

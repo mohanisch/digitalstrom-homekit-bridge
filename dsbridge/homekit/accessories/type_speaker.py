@@ -13,6 +13,9 @@ from dsbridge.homekit import event_decider
 
 @ACC_TYPES.register("Speaker")
 class Speaker(DsAccessory):
+    """
+    Speaker object
+    """
 
     SOURCES = {
         'HDMI 1': 3,
@@ -24,6 +27,7 @@ class Speaker(DsAccessory):
         super().__init__(*args, category=CATEGORY_SPEAKER)
 
         self.accessory_state = False
+        self._on_active_changed = None
 
         #self.states = collector.get_device_state(self.entity_id)
 

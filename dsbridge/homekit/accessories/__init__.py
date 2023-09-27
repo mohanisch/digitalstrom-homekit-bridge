@@ -10,7 +10,7 @@ from pyhap.accessory_driver import AccessoryDriver
 from pyhap.const import CATEGORY_OTHER
 from pyhap.util import callback as pyhap_callback
 
-from ..util import Registry, async_suppress_setup_message, async_show_setup_message
+from dsbridge.homekit.util import Registry, async_suppress_setup_message, async_show_setup_message
 from ...const import BRIDGE_SERIAL_NUMBER, BRIDGE_NAME, MANUFACTURER
 
 ACC_TYPES = Registry()
@@ -254,4 +254,3 @@ class DsBridge(Bridge):
 
     def setup_message(self) -> None:
         """Avoid that the Pyhap setup message appears on the terminal"""
-

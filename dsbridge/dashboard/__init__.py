@@ -1,14 +1,27 @@
-from io import BytesIO
+"""
+Dashboard
+"""
 
+from io import BytesIO
+import os
+import time
+import psutil
 import base36
+
 import prometheus_client
 from flask import Flask, render_template, redirect, request, Response
 from pyqrcode import QRCode
 from waitress import serve
 
-from metrics import REQUESTS, SYSTEM_USAGE
-from .. import config
-from ..helper import write_config
+from dsbridge import config
+from dsbridge.helper import read_config, write_config
+from dsbridge.metrics import REQUESTS, SYSTEM_USAGE
+
+from dsbridge.digitalstrom import state_collector, device_collector
+from dsbridge.digitalstrom.helper import create_application_token
+
+from dsbridge.homekit import homekit
+from dsbridge.homekit import start_homekit, stop_homekit
 
 http = Flask(__name__)
 http.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
@@ -17,13 +30,16 @@ http.jinja_env.auto_reload = True
 
 
 @http.route("/")
-def main():
+def root():
+    """
+    Main entrypoint
+    """
     REQUESTS.inc()
-    c = config.read_config_file()
-    if 'token' not in c:
+
+    if 'token' not in config.read_config_file():
         return redirect("/onboarding/start", code=302)
 
-    from ..digitalstrom import state_collector
+    # from ..digitalstrom import state_collector
     entities = config.read_config_file()['entities']
     states = state_collector.gather_devices_status()
 
@@ -41,9 +57,11 @@ def main():
 
 @http.route("/metrics")
 def metrics():
+    """
+    Responding metrics
+    """
     content_type_latest = str('text/plain; version=0.0.4; charset=utf-8')
 
-    import psutil, os
     SYSTEM_USAGE.labels('cpu_percent').set(psutil.Process(os.getpid()).cpu_percent())
     SYSTEM_USAGE.labels('memory_usage').set(psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024)
     return Response(prometheus_client.generate_latest(), mimetype=content_type_latest)
@@ -51,16 +69,18 @@ def metrics():
 
 @http.route("/homekit/state")
 def homekit_state():
-    from ..homekit import homekit
+    """
+    Returning true if homekit is paired
+    """
     state = homekit.bridge_state()
-
     return str(state.paired)
 
 
 @http.route("/save-devices", methods=['POST'])
 def save_devices():
-    from ..digitalstrom import device_collector
-
+    """
+    Saving devices
+    """
     request_data = request.get_json()
 
     devices = request_data['devices']
@@ -70,35 +90,35 @@ def save_devices():
 
     device_obj = []
     for device in devices:
-        d = ({v['entity_id']: v for v in entities}).get(device)
+        dev = ({v['entity_id']: v for v in entities}).get(device)
         if devices_subapplication.get(device):
-            d['service'] = devices_subapplication.get(device)
-        device_obj.append(d)
+            dev['service'] = devices_subapplication.get(device)
+        device_obj.append(dev)
 
-    zoneids = list(set([i['zoneid'] for i in device_obj if 'zoneid' in i]))
+    zoneids = list({[i['zoneid'] for i in device_obj if 'zoneid' in i]})
 
     zone_obj = []
     for zoneid in zoneids:
         zone_devices = device_collector.get_zone(zoneid)['devices']
-        z = {
+        zone = {
             "id": zoneid,
             "applications": zone_devices
         }
-        zone_obj.append(z)
+        zone_obj.append(zone)
 
-    from ..helper import write_config
     write_config(config.args.config_path + '/config.yml', {'entities': device_obj, 'zones': zone_obj})
     restart_bridge()
     return {"ok": True}
 
 
 @http.route("/api/requesttoken", methods=['GET', 'POST'])
-def requesttoken():
-    from ..digitalstrom.helper import create_application_token
-
+def request_token():
+    """
+    Getting password from user input and requests a token on ds server
+    """
     response = None
     if request.method == 'POST':
-        """modify/update the information for <user_id>"""
+        # modify/update the information for <user_id>
         password = request.form.get('password')
         response = create_application_token(password)
 
@@ -111,8 +131,9 @@ def requesttoken():
 
 @http.route("/restart-bridge", methods=['POST'])
 def restart_bridge():
-    from ..homekit import start_homekit, stop_homekit
-    import time
+    """
+    Restart bridge after user request
+    """
     stop_homekit()
     time.sleep(2.4)
     start_homekit()
@@ -122,6 +143,9 @@ def restart_bridge():
 
 @http.route("/onboarding/<step>", methods=['GET'])
 def onboarding(step):
+    """
+    Handling the onboarding steps
+    """
     dstoken = False
     initial_config = False
     paired = False
@@ -138,12 +162,10 @@ def onboarding(step):
             'onboarding_main.html'
         )
     if step == 'devices':
-        from ..digitalstrom import device_collector
 
-        from ..helper import read_config
         entities = device_collector.get_entities()
         cur_config = read_config(config.args.config_path + '/config.yml')
-        print(entities)
+
         res = {}
         for item in entities:
             if "entities" in cur_config:
@@ -157,7 +179,6 @@ def onboarding(step):
             entities=res
         )
     if step == 'pairing':
-        from ..homekit import homekit
         bridge_state = homekit.bridge_state()
         stream = BytesIO()
         QRCode(xhm_uri(bridge_state.pincode, bridge_state.setup_id)).svg(
@@ -167,14 +188,15 @@ def onboarding(step):
             svgns=False,
             module_color='#2c3d2d'
         )
-        qr = stream.getvalue().decode('utf-8')
+        qrcode = stream.getvalue().decode('utf-8')
 
         return render_template(
             'onboarding_pairing.html',
-            qrcode=qr,
+            qrcode=qrcode,
             pincode=bridge_state.pincode.decode()
         )
 
+    return None
 
 # @http.route("/config", methods=['GET'])
 # def config():
@@ -188,7 +210,8 @@ def onboarding(step):
 
 
 def xhm_uri(pincode, setup_id):
-    """Generates the X-HM:// uri (Setup Code URI)
+    """
+    Generates the X-HM:// uri (Setup Code URI)
 
     :rtype: str
     """
@@ -216,4 +239,7 @@ def xhm_uri(pincode, setup_id):
 
 
 def run_server():
+    """
+    Starting the flask server
+    """
     serve(http, host="0.0.0.0", port=8081)
