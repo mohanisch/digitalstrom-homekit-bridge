@@ -95,7 +95,12 @@ def save_devices():
             dev['service'] = devices_subapplication.get(device)
         device_obj.append(dev)
 
-    zoneids = list({[i['zoneid'] for i in device_obj if 'zoneid' in i]})
+    zoneids = []
+    for i in device_obj:
+        if 'zoneid' in i:
+            zoneids.append(i['zoneid'])
+
+    #zoneids = {[i['zoneid'] for i in device_obj if 'zoneid' in i]}
 
     zone_obj = []
     for zoneid in zoneids:

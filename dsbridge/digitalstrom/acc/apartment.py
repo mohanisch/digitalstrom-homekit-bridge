@@ -17,14 +17,15 @@ class Apartment:
             "last_change": timestamp
         }
 
-        for measurement, value in self.data['measurements'].items():
-            _service = measurement
-            _value = value
-            _entity_id = _dsuid + "." + _service
-            _apartment_states[_entity_id] = {
-                "states": {measurement: {"value": _value}},
-                "last_change": timestamp
-            }
+        if 'measurements' in self.data:
+            for measurement, value in self.data['measurements'].items():
+                _service = measurement
+                _value = value
+                _entity_id = _dsuid + "." + _service
+                _apartment_states[_entity_id] = {
+                    "states": {measurement: {"value": _value}},
+                    "last_change": timestamp
+                }
         return _apartment_states
 
     def get_entities(self):

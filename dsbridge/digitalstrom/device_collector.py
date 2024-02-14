@@ -83,6 +83,14 @@ class DssCollector:
 
         self.load_apartment_data()
 
+    @property
+    def submodules(self):
+        return self._submodules
+
+    @submodules.setter
+    def submodules(self, value):
+        self._submodules = value
+
     def load_apartment_data(self):
         self.apartment_data = collect_data("/", params={
             "include": "dsDevices,functionBlocks,userDefinedStates,submodules,zones"})
