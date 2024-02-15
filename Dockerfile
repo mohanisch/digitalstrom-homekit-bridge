@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
       musl-dev \
       avahi-utils \
       libavahi-compat-libdnssd-dev \
+      libffi-dev \
     && rm -rf /var/lib/apt/lists/* \
     && pip3 install --upgrade pip
 
