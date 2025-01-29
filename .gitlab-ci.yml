@@ -19,7 +19,7 @@ docker-build:
             --opt platform=linux/arm64,linux/aarch64 \
             --local context=. \
             --local dockerfile=. \
-            --import-cache type=registry,ref=$CI_REGISTRY_IMAGE:VERSION \
+            --import-cache type=registry,ref=$CI_REGISTRY_IMAGE:$VERSION \
             --export-cache type=inline \
             --output type=image,name=$CI_REGISTRY_IMAGE:$VERSION,push=true
   rules:
