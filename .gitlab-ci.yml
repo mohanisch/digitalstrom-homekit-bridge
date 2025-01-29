@@ -6,13 +6,7 @@ variables:
   VERSION: "2.1.4"
 
 docker-build:
-  image: jdrouet/docker-with-buildx:stable
   stage: build
-  variables:
-    DOCKER_HOST: tcp://docker:2375/
-    DOCKER_DRIVER: overlay2
-  services:
-    - docker:dind
   before_script:
     - |
       mkdir ~/.docker
