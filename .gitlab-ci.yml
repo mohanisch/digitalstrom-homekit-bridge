@@ -1,4 +1,8 @@
+default:
+  image: moby/buildkit:rootless
+
 variables:
+  BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
   VERSION: "2.1.4"
 
 docker-build:
@@ -10,18 +14,22 @@ docker-build:
   services:
     - docker:dind
   before_script:
-    - echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
-    - echo "${DOCKERHUB_ACCESS_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
-  script:
-    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use
     - |
-        docker buildx build --push --platform linux/amd64,linux/arm64,linux/arm/v8 \
-          --tag "${CI_REGISTRY_IMAGE}:${VERSION}" \
-          --tag "${CI_REGISTRY_IMAGE}:latest" \
-          --tag "${DOCKERHUB_USERNAME}/${CI_PROJECT_NAME}:${VERSION}" \
-          --tag "${DOCKERHUB_USERNAME}/${CI_PROJECT_NAME}:latest" \
-          .
+      mkdir ~/.docker
+      auth=$(echo -n "$CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD" | base64)
+      echo "{\"auths\": {\"$CI_REGISTRY\": {\"auth\": \"$auth\"}}}" > ~/.docker/config.json
+  script:
+    - |
+        buildctl-daemonless.sh build \
+            --frontend=dockerfile.v0 \
+            --opt platform=linux/arm64,linux/arm/v8 \
+            --local context=. \
+            --local dockerfile=. \
+            --import-cache type=registry,ref=$CI_REGISTRY_IMAGE:VERSION \
+            --export-cache type=inline \
+            --output type=image,name=$CI_REGISTRY_IMAGE:$VERSION,push=true
   rules:
     - if: $CI_COMMIT_BRANCH
       exists:
         - Dockerfile
+
