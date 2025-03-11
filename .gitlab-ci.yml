@@ -16,7 +16,7 @@ docker-build:
     - |
         TMPDIR=/dev/shm buildctl-daemonless.sh build \
             --frontend=dockerfile.v0 \
-            --opt platform=linux/arm64,linux/aarch64,linux/amd64 \
+            --opt platform=linux/arm64,linux/aarch64,linux/amd64,linux/arm/v8 \
             --local context=. \
             --local dockerfile=. \
             --import-cache type=registry,ref=$CI_REGISTRY_IMAGE:$VERSION \
