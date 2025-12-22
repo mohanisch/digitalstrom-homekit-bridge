@@ -5,6 +5,8 @@ from pyhap.const import CATEGORY_LIGHTBULB
 from dsbridge.helper import threaded
 
 from . import ACC_TYPES, DsAccessory
+
+logger = logging.getLogger(__name__)
 from ..const import (
     STATE_ON,
     CHAR_ON,
@@ -113,7 +115,7 @@ class Light(DsAccessory):
 
     @threaded
     def _set_chars(self, char_values):
-        logging.debug("Light _set_chars: %s", char_values)
+        logger.debug("Light _set_chars: %s", char_values)
 
         if self.char_on.value == 0:  # and self.char_brightness != 0:
             self.brightness = 0
@@ -130,17 +132,20 @@ class Light(DsAccessory):
 
         for char in char_values.keys():
             if char == "Hue":
-                if self.support['hue']:
-                    _attributes.update({'hue': self.char_hue.value})
-                else:
-                    if self.brightness > 0:
-                        self.xy = get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
-                        _attributes.update({'x': self.xy[0]})
-                        _attributes.update({'y': self.xy[1]})
+                if self.color_supported and hasattr(self, 'char_hue'):
+                    if self.support.get('hue'):
+                        _attributes.update({'hue': self.char_hue.value})
+                    else:
+                        if self.brightness > 0 and hasattr(self, 'char_saturation'):
+                            self.xy = get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
+                            _attributes.update({'x': self.xy[0]})
+                            _attributes.update({'y': self.xy[1]})
             if char == "ColorTemperature":
-                _attributes.update({'colortemp': self.char_colortemp.value})
+                if self.colortemp_supported and hasattr(self, 'char_colortemp'):
+                    _attributes.update({'colortemp': self.char_colortemp.value})
             if char == "Saturation":
-                _attributes.update({'saturation': self.char_saturation.value})
+                if self.color_supported and hasattr(self, 'char_saturation'):
+                    _attributes.update({'saturation': self.char_saturation.value})
 
         _attributes.update({'brightness': self.brightness})
 
@@ -166,30 +171,85 @@ class Light(DsAccessory):
 
     @DsAccessory.run_at_interval(3)
     async def run(self):
-        """Handle accessory driver started event."""
-        device_services = state_collector.get_device_state(self.entity_id)
-        current_time = int(time.time())
+        """Handle accessory driver started event - update state from digitalStrom."""
+        try:
+            device_services = state_collector.get_device_state(self.entity_id)
+            current_time = int(time.time())
+            
+            # Check if state was recently updated (within last 10 seconds)
+            # This prevents unnecessary updates but still catches WebSocket events
+            recently_changed = current_time - 10 < device_services.get('last_change', 0)
+            
+            logger.debug("Checking light %s: recently_changed=%s, last_change=%s, current_time=%s, device_services keys=%s", 
+                        self.entity_id, recently_changed, device_services.get('last_change', 0), current_time, 
+                        list(device_services.keys()) if isinstance(device_services, dict) else 'not a dict')
 
-        for char, values in device_services['states'].items():
-            if char == ATTR_BRIGHTNESS and current_time - 3 < device_services['last_change']:
-                _value = round(values['value'])
-                if self.accessory_state != bool(_value):
-                    self.accessory_state = bool(_value)
-                    self.char_on.set_value(self.accessory_state)
+            for char, values in device_services['states'].items():
+                if char == ATTR_BRIGHTNESS:
+                    # Get raw value from digitalStrom
+                    raw_value = values.get('value', 0)
+                    _value = round(raw_value)
+                    
+                    logger.info("Light %s: raw brightness=%s, rounded=%s, current brightness=%s, recently_changed=%s, states=%s", 
+                               self.entity_id, raw_value, _value, self.brightness, recently_changed, device_services.get('states', {}))
+                    
+                    # Update state if changed
+                    new_state = bool(_value)
+                    if self.accessory_state != new_state:
+                        self.accessory_state = new_state
+                        self.char_on.set_value(self.accessory_state, should_notify=True)
+                        try:
+                            self.char_on.notify()
+                            logger.info("Updated light %s state to %s (notified=True)", self.entity_id, self.accessory_state)
+                        except Exception as notify_error:
+                            logger.error("Error notifying state change: %s", notify_error, exc_info=True)
 
-                if self.brightness != _value:
-                    self.brightness = _value
-                    if self.brightness_supported:
-                        self.char_brightness.set_value(self.brightness)
+                    # Always update brightness if value differs (regardless of recently_changed)
+                    if self.brightness != _value:
+                        old_brightness = self.brightness
+                        self.brightness = _value
+                        if self.brightness_supported:
+                            # Ensure brightness is in valid range (0-100)
+                            brightness_to_set = max(0, min(100, int(_value)))
+                            
+                            # Log before setting
+                            logger.info("About to update brightness: old=%s, new=%s, raw=%s, to_set=%s", 
+                                       old_brightness, self.brightness, raw_value, brightness_to_set)
+                            
+                            # Set value - pyhap's set_value automatically notifies if value changed
+                            old_char_value = self.char_brightness.value
+                            self.char_brightness.set_value(brightness_to_set)
+                            
+                            # Explicitly notify to ensure clients are updated
+                            try:
+                                self.char_brightness.notify()
+                                logger.info("Updated light %s brightness: char_value before=%s, after=%s, set=%s, notified=True", 
+                                           self.entity_id, old_char_value, self.char_brightness.value, brightness_to_set)
+                            except Exception as notify_error:
+                                logger.error("Error notifying brightness change: %s", notify_error, exc_info=True)
+                        else:
+                            logger.warning("Light %s brightness changed but brightness not supported", self.entity_id)
 
-            if char == "saturation" and current_time - 3 < device_services['last_change']:
-                _value = round(values['value'])
-                self.saturation = _value
-                self.char_saturation.set_value(self.saturation)
+                if char == "saturation" and recently_changed:
+                    _value = round(values['value'])
+                    if self.saturation != _value:
+                        self.saturation = _value
+                        if self.color_supported and hasattr(self, 'char_saturation'):
+                            self.char_saturation.set_value(self.saturation)
+                            self.char_saturation.notify()
+                            logger.info("Updated light %s saturation to %s", self.entity_id, self.saturation)
 
-            if char == "colortemp" and current_time - 3 < device_services['last_change']:
-                _value = round(values['value'])
-                self.char_colortemp.set_value(_value)
+                if char == "colortemp" and recently_changed:
+                    _value = round(values['value'])
+                    if self.colortemp_supported and hasattr(self, 'char_colortemp'):
+                        self.char_colortemp.set_value(_value)
+                        self.char_colortemp.notify()
+                        logger.info("Updated light %s color temp to %s", self.entity_id, _value)
+        except KeyError:
+            # Device state not found yet, skip this update
+            logger.debug("Device state not found for %s, skipping update", self.entity_id)
+        except Exception as e:
+            logger.error("Error updating light state for %s: %s", self.entity_id, e, exc_info=True)
             #     print("char:", char, values)
             #     if self.support['hue']:
             #         self.hue = _value
@@ -208,7 +268,10 @@ class Light(DsAccessory):
         state = new_state['states']['on']
         attributes = new_state['attributes']
 
+        logger.debug("async_update_state for %s: state=%s, attributes=%s", self.entity_id, state, attributes)
+
         self.char_on.set_value(state)
+        self.char_on.notify()
         self.accessory_state = state
 
         # color_mode = attributes.get(ATTR_COLOR_MODE)
@@ -217,15 +280,16 @@ class Light(DsAccessory):
 
         if (
                 self.brightness_supported
-                and (brightness := attributes[ATTR_BRIGHTNESS]) is not None
+                and (brightness := attributes.get(ATTR_BRIGHTNESS)) is not None
                 and isinstance(brightness, (int, float))
         ):
-            brightness = self.brightness
+            # Use brightness from attributes, not self.brightness
             if brightness == 0 and state == STATE_ON:
                 brightness = 1
+            logger.info("async_update_state: Setting brightness to %s (from attributes)", brightness)
+            self.brightness = brightness
             self.char_brightness.set_value(brightness)
-            # if color_mode_changed:
-            #     self.char_brightness.notify()
+            self.char_brightness.notify()
         # Handle Brightness
 
         # Handle Color - color must always be set before color temperature

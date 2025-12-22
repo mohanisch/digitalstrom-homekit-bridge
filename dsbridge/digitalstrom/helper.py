@@ -9,41 +9,89 @@ def generate_dsuid(name: str) -> str:
 
 
 def create_application_token(password):
+    """Create application token for digitalStrom API with error handling."""
+    import logging
+    import os
+    
     import requests
     import urllib3
     from ..digitalstrom import SYSTEM_API
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    
+    logger = logging.getLogger(__name__)
+    
+    # Determine SSL verification setting
+    env_verify = os.environ.get('DSS_VERIFY_SSL', 'true').lower()
+    verify_ssl = env_verify in ('true', '1', 'yes', 'on')
+    
+    if not verify_ssl:
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        logger.warning("SSL verification is DISABLED for token creation - security risk!")
 
     session = requests.Session()
-
     host = args.dss_hostname + ":" + args.dss_http_port
+    base_url = "https://" + host + "/" + SYSTEM_API
 
-    logintoken_param = {"user": "dssadmin", "password": password}
-    logintoken = session.get("https://" + host + "/" + SYSTEM_API + '/login', params=logintoken_param,
-                             verify=False).json()
+    try:
+        # Step 1: Login
+        logintoken_param = {"user": "dssadmin", "password": password}
+        logintoken_response = session.get(
+            base_url + '/login',
+            params=logintoken_param,
+            verify=verify_ssl,
+            timeout=10
+        )
+        logintoken_response.raise_for_status()
+        logintoken = logintoken_response.json()
 
-    if logintoken['ok']:
+        if not logintoken.get('ok'):
+            logger.error("Login failed: %s", logintoken.get('message', 'Unknown error'))
+            return logintoken
+
+        # Step 2: Request application token
         application_token_param = {"applicationName": "dS HomeKit bridge"}
-        application_token = requests.get(
-            "https://" + host + "/" + SYSTEM_API + '/requestApplicationToken',
+        application_token_response = requests.get(
+            base_url + '/requestApplicationToken',
             params=application_token_param,
-            verify=False,
-            timeout=5
-        ).json()
+            verify=verify_ssl,
+            timeout=10
+        )
+        application_token_response.raise_for_status()
+        application_token = application_token_response.json()
 
+        # Step 3: Enable token
         param = {"applicationToken": application_token['result']['applicationToken']}
         headers = {"Cookie": "token=%s" % logintoken['result']['token']}
-        enable_application_token = requests.get(
-            "https://" + host + "/" + SYSTEM_API + '/enableToken',
+        enable_token_response = requests.get(
+            base_url + '/enableToken',
             headers=headers,
             params=param,
-            verify=False,
-            timeout=5
-        ).json()
+            verify=verify_ssl,
+            timeout=10
+        )
+        enable_token_response.raise_for_status()
+        enable_application_token = enable_token_response.json()
+        
+        # Add token to result
         enable_application_token['token'] = application_token['result']['applicationToken']
-        result = enable_application_token
+        logger.info("Successfully created application token")
+        
+        return enable_application_token
 
-    else:
-        result = logintoken
-
-    return result
+    except requests.exceptions.RequestException as e:
+        logger.error("Error creating application token: %s", e, exc_info=True)
+        return {
+            'ok': False,
+            'message': f"Request failed: {str(e)}"
+        }
+    except KeyError as e:
+        logger.error("Unexpected response structure: %s", e, exc_info=True)
+        return {
+            'ok': False,
+            'message': f"Unexpected response format: {str(e)}"
+        }
+    except Exception as e:
+        logger.error("Unexpected error creating token: %s", e, exc_info=True)
+        return {
+            'ok': False,
+            'message': f"Unexpected error: {str(e)}"
+        }

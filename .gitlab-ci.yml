@@ -3,7 +3,7 @@ default:
 
 variables:
   BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
-  VERSION: "2.1.4"
+  VERSION: "2.2.0"
 
 docker-build:
   stage: build

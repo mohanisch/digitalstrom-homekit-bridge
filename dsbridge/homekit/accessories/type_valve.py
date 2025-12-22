@@ -73,24 +73,34 @@ class Sprinkler(DsAccessory):
 
     @DsAccessory.run_at_interval(3)
     async def run(self):
+        """Update valve state from digitalStrom."""
+        try:
+            device_state = state_collector.get_device_state(self.entity_id)
+            current_time = int(time.time())
+            
+            # Check if state was recently updated (within last 5 seconds)
+            recently_changed = current_time - 5 < device_state.get('last_change', 0)
+            _value = device_state['states']['on']
 
-        device_state = state_collector.get_device_state(self.entity_id)
-        current_time = int(time.time())
+            if self.char_remaining_duration.value <= 0:
+                if self.accessory_state:
+                    self.accessory_state = False
+                else:
+                    self.char_remaining_duration.set_value(self.char_set_duration.value)
 
-        _value = device_state['states']['on']
+            if self.char_remaining_duration.value > 0:
+                self.char_remaining_duration.set_value(self.char_remaining_duration.value - 3)
 
-        if self.char_remaining_duration.value <= 0:
-            if self.accessory_state:
-                self.accessory_state = False
-            else:
-                self.char_remaining_duration.set_value(self.char_set_duration.value)
-
-        if self.char_remaining_duration.value > 0:
-            self.char_remaining_duration.set_value(self.char_remaining_duration.value - 3)
-
-        if self.accessory_state != bool(_value) and current_time-3 < device_state['last_change']:
-            self.accessory_state = bool(_value)
-            self.char_active.set_value(self.accessory_state)
-            self.char_inuse.set_value(self.accessory_state)
+            # Always update if state changed, or if recently updated
+            if recently_changed or self.accessory_state != bool(_value):
+                if self.accessory_state != bool(_value):
+                    self.accessory_state = bool(_value)
+                    self.char_active.set_value(self.accessory_state)
+                    self.char_inuse.set_value(self.accessory_state)
+                    logging.debug("Updated valve %s state to %s", self.entity_id, self.accessory_state)
+        except KeyError:
+            logging.debug("Device state not found for %s, skipping update", self.entity_id)
+        except Exception as e:
+            logging.error("Error updating valve state for %s: %s", self.entity_id, e, exc_info=True)
 
 

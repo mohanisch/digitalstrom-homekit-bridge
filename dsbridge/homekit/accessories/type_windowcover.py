@@ -1,5 +1,6 @@
 """Class to hold all cover accessories."""
 import logging
+import time
 from pyhap.const import CATEGORY_WINDOW_COVERING
 from dsbridge.homekit import event_decider
 from dsbridge.homekit.const import CHAR_HOLD_POSITION, CHAR_TARGET_HORIZONTAL_TILT_ANGLE, CHAR_CURRENT_HORIZONTAL_TILT_ANGLE, \
@@ -80,18 +81,30 @@ class WindowsCovering(DsAccessory):
 
     @DsAccessory.run_at_interval(3)
     async def run(self):
-        device_services = state_collector.get_device_state(self.entity_id)
+        """Update window cover state from digitalStrom."""
+        try:
+            device_services = state_collector.get_device_state(self.entity_id)
+            current_time = int(time.time())
+            
+            # Check if state was recently updated (within last 5 seconds)
+            recently_changed = current_time - 5 < device_services.get('last_change', 0)
 
-        for attr, values in device_services['states'].items():
-            if attr == ATTR_SHADE_POSITION_OUTSIDE:
-                _target_value = round(values['targetvalue'])
-                _current_value = round(values['value'])
-                _position_state = 2 if self.target_position == self.current_position else 1
-                if self.target_position != _target_value or self.current_position != _current_value:
-                    self.target_position = _target_value
-                    self.current_position = _current_value
+            for attr, values in device_services['states'].items():
+                if attr == ATTR_SHADE_POSITION_OUTSIDE:
+                    _target_value = round(values['targetvalue'])
+                    _current_value = round(values['value'])
+                    _position_state = 2 if _target_value == _current_value else 1
+                    
+                    # Always update if values changed, or if recently updated
+                    if recently_changed or self.target_position != _target_value or self.current_position != _current_value:
+                        self.target_position = _target_value
+                        self.current_position = _current_value
 
-                    self.char_current_position.set_value(self.current_position)
-                    self.char_target_position.set_value(self.target_position)
-
-                    self.char_position_state.set_value(_position_state)
+                        self.char_current_position.set_value(self.current_position)
+                        self.char_target_position.set_value(self.target_position)
+                        self.char_position_state.set_value(_position_state)
+                        logging.debug("Updated window cover %s: target=%s, current=%s", self.entity_id, _target_value, _current_value)
+        except KeyError:
+            logging.debug("Device state not found for %s, skipping update", self.entity_id)
+        except Exception as e:
+            logging.error("Error updating window cover state for %s: %s", self.entity_id, e, exc_info=True)

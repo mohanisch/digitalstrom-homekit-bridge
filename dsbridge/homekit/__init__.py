@@ -3,8 +3,8 @@ Homekit module which handles homekit relate stuff
 """
 from __future__ import annotations
 
-import _thread
 import logging
+import threading
 
 from dsbridge import config
 from dsbridge.const import STATUS_READY
@@ -13,21 +13,55 @@ from dsbridge.homekit.aid_manager import AccessoryAidStorage
 from dsbridge.homekit.event_handler import EventDecider
 from dsbridge.digitalstrom import state_collector
 
+logger = logging.getLogger(__name__)
+
+# Thread reference for homekit
+_homekit_thread = None
+
 
 def start_homekit():
+    """Start homekit in a separate thread."""
+    global _homekit_thread
+    
     def add_devices():
-        file = config.read_config_file()
-        for dsdevice in file['entities']:
-            homekit.add_bridge_accessory(dsdevice)
+        try:
+            file = config.read_config_file()
+            if 'entities' not in file:
+                logger.warning("No entities found in config")
+                return
+                
+            for dsdevice in file['entities']:
+                try:
+                    homekit.add_bridge_accessory(dsdevice)
+                except Exception as e:
+                    logger.error(
+                        "Failed to add accessory %s: %s",
+                        dsdevice.get('name', 'unknown'),
+                        e,
+                        exc_info=True
+                    )
+        except Exception as e:
+            logger.error("Error adding devices: %s", e, exc_info=True)
 
     def run_homekit():
-        homekit.setup()
-        state_collector.gather_devices_status()
-        add_devices()
-        logging.info("Start homekit...")
-        homekit.start()
+        try:
+            homekit.setup()
+            state_collector.gather_devices_status()
+            add_devices()
+            logger.info("Starting homekit...")
+            homekit.start()
+        except Exception as e:
+            logger.error("Fatal error in homekit thread: %s", e, exc_info=True)
 
-    _thread.start_new_thread(run_homekit, ())
+    if _homekit_thread is None or not _homekit_thread.is_alive():
+        _homekit_thread = threading.Thread(
+            target=run_homekit,
+            daemon=True,
+            name="homekit-runner"
+        )
+        _homekit_thread.start()
+    else:
+        logger.warning("Homekit thread is already running")
 
 
 def stop_homekit():

@@ -50,15 +50,26 @@ class Switch(DsAccessory):
 
     @DsAccessory.run_at_interval(3)
     async def run(self):
+        """Update switch state from digitalStrom."""
+        try:
+            device_state = state_collector.get_device_state(self.entity_id)
+            current_time = int(time.time())
+            
+            # Check if state was recently updated (within last 5 seconds)
+            recently_changed = current_time - 5 < device_state.get('last_change', 0)
+            _value = device_state['states']['on']
 
-        device_state = state_collector.get_device_state(self.entity_id)
-        current_time = int(time.time())
-
-        _value = device_state['states']['on']
-
-        if self.accessory_state != bool(_value) and current_time - 3 < device_state['last_change']:
-            self.accessory_state = bool(_value)
-            self.char_on.set_value(self.accessory_state)
+            # Always update if state changed, or if recently updated
+            if recently_changed or self.accessory_state != bool(_value):
+                if self.accessory_state != bool(_value):
+                    self.accessory_state = bool(_value)
+                    self.char_on.set_value(self.accessory_state)
+                    logging.debug("Updated switch %s state to %s", self.entity_id, self.accessory_state)
+        except KeyError:
+            # Device state not found yet, skip this update
+            logging.debug("Device state not found for %s, skipping update", self.entity_id)
+        except Exception as e:
+            logging.error("Error updating switch state for %s: %s", self.entity_id, e, exc_info=True)
 
     def async_update_state(self, new_state):
         """Update switch state after state changed."""
