@@ -35,10 +35,14 @@ def write_config(path, data):
 
 
 def threaded(fn):
+    """
+    Decorator to run a function in a separate thread.
+    Returns None to avoid JSON serialization issues with Thread objects.
+    """
     def wrapper(*args, **kwargs):
-        thread = threading.Thread(target=fn, args=args, kwargs=kwargs)
+        thread = threading.Thread(target=fn, args=args, kwargs=kwargs, daemon=True)
         thread.start()
-        return thread
+        return None  # Don't return thread object to avoid JSON serialization issues
 
     return wrapper
 

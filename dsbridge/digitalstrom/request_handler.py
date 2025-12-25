@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-def retry_on_failure(max_retries: int = 3, backoff_factor: float = 0.5):
+def retry_on_failure(max_retries: int = 2, backoff_factor: float = 0.2):  # Reduced for faster response on Pi
     """
     Decorator for retrying failed requests with exponential backoff.
     
@@ -113,10 +113,10 @@ class RequestHandler:
         self.session = requests.Session()
         self.session.headers.update({"Authorization": f"Bearer {self.token}"})
         
-        # Configure retry strategy
+        # Configure retry strategy - optimized for Raspberry Pi (fewer retries, faster backoff)
         retry_strategy = Retry(
-            total=3,
-            backoff_factor=0.5,
+            total=2,  # Reduced from 3 to 2 for faster failure handling
+            backoff_factor=0.2,  # Reduced from 0.5 for faster retries
             status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["GET", "POST", "PATCH"]
         )
@@ -137,7 +137,7 @@ class RequestHandler:
             setattr(self.session, arg, value)
 
     @REQUEST_TIME.time()
-    @retry_on_failure(max_retries=3, backoff_factor=0.5)
+    @retry_on_failure(max_retries=2, backoff_factor=0.2)
     def get(self, url: str, **kwargs) -> Dict[str, Any]:
         """
         Perform GET request with retry logic.
@@ -180,7 +180,7 @@ class RequestHandler:
             raise
 
     @REQUEST_TIME.time()
-    @retry_on_failure(max_retries=3, backoff_factor=0.5)
+    @retry_on_failure(max_retries=2, backoff_factor=0.2)
     def post(self, url: str, **kwargs) -> requests.Response:
         """
         Perform POST request with retry logic.
@@ -220,7 +220,7 @@ class RequestHandler:
             raise
 
     @REQUEST_TIME.time()
-    @retry_on_failure(max_retries=3, backoff_factor=0.5)
+    @retry_on_failure(max_retries=2, backoff_factor=0.2)
     def patch(self, url: str, **kwargs) -> requests.Response:
         """
         Perform PATCH request with retry logic.
@@ -260,7 +260,7 @@ class RequestHandler:
             raise
 
     @REQUEST_TIME.time()
-    @retry_on_failure(max_retries=3, backoff_factor=0.5)
+    @retry_on_failure(max_retries=2, backoff_factor=0.2)
     def get_token(self, api: str) -> str:
         """
         Get application token from digitalStrom API.

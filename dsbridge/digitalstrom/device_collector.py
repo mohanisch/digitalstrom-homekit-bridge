@@ -8,9 +8,14 @@ from ..config import args, read_config_file as c
 logger = logging.getLogger(__name__)
 
 
+# Request handler cache to avoid recreating sessions
+_request_handler_cache = None
+_request_handler_token = None
+
+
 def collect_data(uri: str, api: str = SMART_HOME_API, params=None, key="data"):
     """
-    Collect data from digitalStrom API with error handling.
+    Collect data from digitalStrom API with error handling and connection reuse.
     
     Args:
         uri: API endpoint URI
@@ -25,15 +30,24 @@ def collect_data(uri: str, api: str = SMART_HOME_API, params=None, key="data"):
         KeyError: If key not found in response
         requests.exceptions.RequestException: If API request fails
     """
+    global _request_handler_cache, _request_handler_token
+    
     try:
         config = c()
         if 'token' not in config or not config['token']:
             raise ValueError("No token found in configuration")
-            
-        request_handler = RequestHandler(
-            "https://" + args.dss_hostname + ":" + args.dss_http_port,
-            config['token']
-        )
+        
+        # Reuse request handler if token hasn't changed (connection pooling)
+        if (_request_handler_cache is None or 
+            _request_handler_token != config['token']):
+            _request_handler_cache = RequestHandler(
+                "https://" + args.dss_hostname + ":" + args.dss_http_port,
+                config['token']
+            )
+            _request_handler_token = config['token']
+        
+        request_handler = _request_handler_cache
+        
         if params is None:
             params = {}
 
@@ -54,6 +68,26 @@ class DssStateCollector:
         self._device_states = {}
 
     def get_device_state(self, entity_id: str):
+        """
+        Get device state with error handling.
+        
+        Args:
+            entity_id: Entity ID to look up
+            
+        Returns:
+            Device state dictionary
+            
+        Raises:
+            KeyError: If entity_id not found
+        """
+        if entity_id not in self._device_states:
+            logger.warning("Device state not found for entity_id: %s", entity_id)
+            # Return empty state structure to prevent crashes
+            return {
+                'states': {},
+                'attributes': {},
+                'last_change': 0
+            }
         return self._device_states[entity_id]
 
     def gather_devices_status(self):
@@ -93,28 +127,25 @@ class DssStateCollector:
             except Exception as e:
                 logger.error("Error gathering output device states: %s", e, exc_info=True)
 
-            for device in zones_status:
+            # Optimize zone processing with dictionary lookup
+            zones_dict = {str(v['id']): v for v in zones_status}
+            
+            for device_id, device in zones_dict.items():
                 try:
                     if 'attributes' in device and 'measurements' in device['attributes']:
-                        _dsuid = generate_dsuid(device['id'])
-                        _states = {}
-                        zone_attributes = ({v['id']: v for v in zones_status}).get(device['id'])
-                        
-                        if zone_attributes and 'attributes' in zone_attributes:
-                            zone_measurements = zone_attributes['attributes'].get('measurements', {})
+                        _dsuid = generate_dsuid(device_id)
+                        zone_measurements = device['attributes'].get('measurements', {})
 
-                            for measurement, value in zone_measurements.items():
-                                entity_id = _dsuid + "." + measurement
-                                _states[measurement] = {
-                                    "value": value,
-                                }
-                                _measurements = {entity_id: {
-                                    "states": _states,
-                                    "last_change": last_change
-                                }}
-                                self._device_states.update(_measurements)
+                        for measurement, value in zone_measurements.items():
+                            entity_id = _dsuid + "." + measurement
+                            _states = {measurement: {"value": value}}
+                            _measurements = {entity_id: {
+                                "states": _states,
+                                "last_change": last_change
+                            }}
+                            self._device_states.update(_measurements)
                 except Exception as e:
-                    logger.error("Error processing zone device %s: %s", device.get('id', 'unknown'), e, exc_info=True)
+                    logger.error("Error processing zone device %s: %s", device_id, e, exc_info=True)
 
             return self._device_states
         except Exception as e:
@@ -247,28 +278,41 @@ class DssCollector:
         return apartment.get_entities()
 
     def _transform_zones(self, data):
+        """Transform zone data with optimized dictionary lookups."""
         zones = []
-        zones_data = data
+        
+        # Pre-build lookup dictionaries for O(1) access
+        function_blocks_dict = {v['id']: v['attributes'] for v in self._function_blocks}
+        submodules_dict = {v['id']: v['attributes']['application'] for v in self._submodules}
 
-        for zone in zones_data:
+        for zone in data:
+            zone_id = zone['id']
+            
+            # Skip special zone
+            if zone_id == '65534' or zone_id == 65534:
+                continue
 
             _applications = {}
-            if zone['id'] != '65534':
-                for application in zone['attributes']['applications']:
-                    _applications[application] = []
+            zone_attrs = zone.get('attributes', {})
+            
+            # Initialize applications
+            for application in zone_attrs.get('applications', []):
+                _applications[application] = []
 
-                for submodule in zone["attributes"]["submodules"]:
-                    function_attributes = ({v['id']: v['attributes'] for v in self._function_blocks}).get(submodule)
-                    if "outputs" in function_attributes:
-                        submodule_applications = (
-                            {v['id']: v['attributes']['application'] for v in self._submodules}).get(submodule)
-                        _applications[submodule_applications].append(submodule)
+            # Process submodules
+            for submodule in zone_attrs.get("submodules", []):
+                function_attrs = function_blocks_dict.get(submodule)
+                if function_attrs and "outputs" in function_attrs:
+                    submodule_app = submodules_dict.get(submodule)
+                    if submodule_app and submodule_app in _applications:
+                        _applications[submodule_app].append(submodule)
 
-            if "name" in zone["attributes"] and zone["id"] != 65534:
-                cleaned = {
-                    "id": zone["id"],
-                    "name": zone["attributes"]["name"],
+            # Only add zones with names
+            if "name" in zone_attrs:
+                zones.append({
+                    "id": zone_id,
+                    "name": zone_attrs["name"],
                     "devices": _applications
-                }
-                zones.append(cleaned)
+                })
+        
         self._zones = zones

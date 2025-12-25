@@ -53,10 +53,14 @@ class WindowsCovering(DsAccessory):
 
     def set_stop(self, value):
         """Stop the cover motion from HomeKit."""
-        logging.debug("%s: Set stop at %d", self.entity_id, value)
-
-        if value != 1:
-            return
+        try:
+            logging.debug("%s: Set stop at %d", self.entity_id, value)
+            if value != 1:
+                return
+            # TODO: Implement stop functionality
+            logging.debug("%s: Stop requested", self.entity_id)
+        except Exception as e:
+            logging.error("Error in set_stop for %s: %s", self.entity_id, e, exc_info=True)
 
     def set_tilt(self, value):
         """Set tilt to value if call came from HomeKit."""
@@ -65,29 +69,68 @@ class WindowsCovering(DsAccessory):
     @threaded
     def move_cover(self, value):
         """Move cover to value if call came from HomeKit."""
-        logging.debug("%s: Set position to %d", self.dsuid, value)
+        try:
+            logging.info("%s: Setting position to %d", self.entity_id, value)
+            
+            # Mark that user just changed the state - ignore external updates for a short time
+            self.mark_user_action()
+            
+            # Update local state immediately
+            self.target_position = value
+            self.position_state = 1  # Moving
+            
+            # Set the characteristic values
+            self.char_target_position.set_value(value)
+            self.char_position_state.set_value(1)  # Moving
+            
+            # Notify clients immediately
+            try:
+                self.char_target_position.notify()
+                self.char_position_state.notify()
+            except Exception as notify_error:
+                logging.error("Error notifying position change: %s", notify_error, exc_info=True)
+            
+            # Send event to digitalStrom
+            _attributes = {}
+            _attributes.update({ATTR_SHADE_POSITION_OUTSIDE: value})
 
-        _attributes = {}
-        _attributes.update({ATTR_SHADE_POSITION_OUTSIDE: self.char_target_position.value})
+            event_decider.device_event(
+                self.entity_id,
+                self.dsuid,
+                self.zoneid,
+                _attributes,
+                "shades"
+            )
+            logging.debug("%s: Position change event sent to digitalStrom", self.entity_id)
+        except Exception as e:
+            logging.error("Error in move_cover for %s: %s", self.entity_id, e, exc_info=True)
 
-        event_decider.device_event(
-            self.entity_id,
-            self.dsuid,
-            self.zoneid,
-            _attributes,
-            "shades"
-        )
-        self.char_target_position.set_value(value)
-
-    @DsAccessory.run_at_interval(3)
+    @DsAccessory.run_at_interval(2)  # Reduced from 3 to 2 seconds for faster response
     async def run(self):
         """Update window cover state from digitalStrom."""
         try:
-            device_services = state_collector.get_device_state(self.entity_id)
             current_time = int(time.time())
+            
+            # Ignore updates if user just changed the state (prevents race condition)
+            if self.should_ignore_update():
+                logging.debug("Ignoring state update for %s - user action was %d seconds ago", 
+                             self.entity_id, current_time - self._last_user_action)
+                return
+            
+            device_services = state_collector.get_device_state(self.entity_id)
             
             # Check if state was recently updated (within last 5 seconds)
             recently_changed = current_time - 5 < device_services.get('last_change', 0)
+            
+            # Early exit if no changes - saves CPU on Pi
+            if not recently_changed:
+                shade_state = device_services.get('states', {}).get(ATTR_SHADE_POSITION_OUTSIDE)
+                if shade_state:
+                    target_val = round(shade_state.get('targetvalue', 0))
+                    current_val = round(shade_state.get('value', 0))
+                    if (self.target_position == target_val and 
+                        self.current_position == current_val):
+                        return
 
             for attr, values in device_services['states'].items():
                 if attr == ATTR_SHADE_POSITION_OUTSIDE:
@@ -103,7 +146,16 @@ class WindowsCovering(DsAccessory):
                         self.char_current_position.set_value(self.current_position)
                         self.char_target_position.set_value(self.target_position)
                         self.char_position_state.set_value(_position_state)
-                        logging.debug("Updated window cover %s: target=%s, current=%s", self.entity_id, _target_value, _current_value)
+                        
+                        # Notify clients of changes
+                        try:
+                            self.char_current_position.notify()
+                            self.char_target_position.notify()
+                            self.char_position_state.notify()
+                            logging.debug("Updated window cover %s: target=%s, current=%s, state=%s", 
+                                        self.entity_id, _target_value, _current_value, _position_state)
+                        except Exception as notify_error:
+                            logging.error("Error notifying window cover changes: %s", notify_error, exc_info=True)
         except KeyError:
             logging.debug("Device state not found for %s, skipping update", self.entity_id)
         except Exception as e:

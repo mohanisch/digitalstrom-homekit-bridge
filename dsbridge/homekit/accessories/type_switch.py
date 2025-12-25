@@ -17,7 +17,6 @@ class Switch(DsAccessory):
         super().__init__(*args, category=CATEGORY_SWITCH)
 
         self.accessory_state = False
-
         self.states = state_collector.get_device_state(self.entity_id)
 
         serv_switch = self.add_preload_service('Switch')
@@ -31,6 +30,10 @@ class Switch(DsAccessory):
     @threaded
     def _set_chars(self, char_values):
         logging.debug("Switch _set_chars: %s", char_values)
+        
+        # Mark that user just changed the state - ignore external updates for a short time
+        self.mark_user_action()
+        
         _attributes = {}
 
         if self.char_on.value == 0:
@@ -48,22 +51,34 @@ class Switch(DsAccessory):
             self.application
         )
 
-    @DsAccessory.run_at_interval(3)
+    @DsAccessory.run_at_interval(2)  # Reduced from 3 to 2 seconds for faster response
     async def run(self):
         """Update switch state from digitalStrom."""
         try:
-            device_state = state_collector.get_device_state(self.entity_id)
             current_time = int(time.time())
+            
+            # Ignore updates if user just changed the state (prevents race condition)
+            if current_time < self._ignore_updates_until:
+                logging.debug("Ignoring state update for %s - user action was %d seconds ago", 
+                             self.entity_id, current_time - self._last_user_action)
+                return
+            
+            device_state = state_collector.get_device_state(self.entity_id)
             
             # Check if state was recently updated (within last 5 seconds)
             recently_changed = current_time - 5 < device_state.get('last_change', 0)
             _value = device_state['states']['on']
+
+            # Early exit if no changes - saves CPU on Pi
+            if not recently_changed and self.accessory_state == bool(_value):
+                return
 
             # Always update if state changed, or if recently updated
             if recently_changed or self.accessory_state != bool(_value):
                 if self.accessory_state != bool(_value):
                     self.accessory_state = bool(_value)
                     self.char_on.set_value(self.accessory_state)
+                    self.char_on.notify()
                     logging.debug("Updated switch %s state to %s", self.entity_id, self.accessory_state)
         except KeyError:
             # Device state not found yet, skip this update

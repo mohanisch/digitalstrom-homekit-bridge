@@ -68,7 +68,7 @@ def get_accessory(driver, device, aid):
 
 class DsAccessory(Accessory):
     """
-    A representation of a HAP accessory
+    A representation of a HAP accessory with race condition protection.
     """
     def __init__(
         self,
@@ -98,6 +98,32 @@ class DsAccessory(Accessory):
             self.chars = config['chars']
         if 'support' in config:
             self.support = config['support']
+        
+        # Race condition protection: ignore external updates after user actions
+        self._last_user_action = 0  # Timestamp of last user action via HomeKit
+        self._ignore_updates_until = 0  # Ignore state updates until this timestamp
+        self._ignore_duration = 3  # Seconds to ignore updates after user action
+    
+    def mark_user_action(self, duration: int = None):
+        """
+        Mark that user just changed the state via HomeKit.
+        External updates will be ignored for a short period.
+        
+        Args:
+            duration: Optional override for ignore duration in seconds (default: 3)
+        """
+        current_time = int(time.time())
+        self._last_user_action = current_time
+        self._ignore_updates_until = current_time + (duration or self._ignore_duration)
+    
+    def should_ignore_update(self) -> bool:
+        """
+        Check if external state updates should be ignored.
+        
+        Returns:
+            True if updates should be ignored, False otherwise
+        """
+        return int(time.time()) < self._ignore_updates_until
 
 
 class DsAccessoryDriver(AccessoryDriver):

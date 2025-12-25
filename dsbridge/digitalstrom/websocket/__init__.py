@@ -127,11 +127,11 @@ class DsWebsocket:
             if "arguments" in _message and len(_message['arguments']) > 0:
                 event_type = _message['arguments'][0].get('type')
                 
+                # Only process relevant events to reduce CPU usage
                 if event_type == 'apartmentStatusChanged':
                     logger.info("Apartment status changed - updating device states")
                     try:
                         state_collector.gather_devices_status()
-                        logger.debug("Device states updated successfully")
                     except Exception as e:
                         logger.error("Error gathering device status: %s", e, exc_info=True)
 
@@ -142,8 +142,7 @@ class DsWebsocket:
                         logger.debug("Device data reloaded successfully")
                     except Exception as e:
                         logger.error("Error loading apartment data: %s", e, exc_info=True)
-                else:
-                    logger.debug("Unhandled event type: %s", event_type)
+                # Skip logging for unhandled events to reduce log noise
             else:
                 logger.debug("Websocket message without arguments: %s", _message)
                         

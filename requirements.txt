@@ -10,5 +10,5 @@ Flask==2.3.3
 waitress~=3.0.1
 base36~=0.1.1
 websocket-client~=1.6.3
-psutil~=5.9.5
+psutil==5.9.5
 prometheus_client
