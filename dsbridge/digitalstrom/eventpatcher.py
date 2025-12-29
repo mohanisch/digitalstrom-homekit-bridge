@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class EventPatcher:
     """Handles patching events to digitalStrom API."""
-    
+
     def __init__(self):
         """Initialize EventPatcher with request handler."""
         from ..config import args, read_config_file as config_file
@@ -21,7 +21,7 @@ class EventPatcher:
             config = config_file()
             if 'token' not in config or not config['token']:
                 raise ValueError("No token found in configuration")
-                
+
             from .request_handler import RequestHandler
             self.request_handler = RequestHandler(
                 "https://" + args.dss_hostname + ":" + args.dss_http_port,
@@ -83,6 +83,9 @@ class EventPatcher:
         try:
             device_attributes = []
             for output_id, value in attributes.items():
+                # Convert brightness and colortemp to integer (digitalSTROM API expects integer values)
+                if output_id in ('brightness', 'colortemp') and isinstance(value, (int, float)):
+                    value = int(round(value))
                 device_attribute = {
                     "op": "replace",
                     "path": "/functionBlocks/" + dsuid + "/outputs/" + output_id + "/value",

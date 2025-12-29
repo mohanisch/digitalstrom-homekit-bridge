@@ -3,12 +3,16 @@ default:
 
 variables:
   BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
-  VERSION: "2.2.0"
 
 docker-build:
   stage: build
   before_script:
     - |
+      if [ -f VERSION ]; then
+        export VERSION=$(cat VERSION | tr -d '[:space:]')
+      else
+        export VERSION="2.3.0"
+      fi
       mkdir ~/.docker
       auth=$(echo -n "$CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD" | base64)
       echo "{\"auths\": {\"$CI_REGISTRY\": {\"auth\": \"$auth\"}}}" > ~/.docker/config.json

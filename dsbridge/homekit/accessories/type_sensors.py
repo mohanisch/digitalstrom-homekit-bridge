@@ -1,7 +1,7 @@
 from pyhap.const import CATEGORY_SENSOR
 
-from ...digitalstrom import state_collector
 from dsbridge.homekit.accessories import ACC_TYPES, DsAccessory
+from ...digitalstrom import state_collector
 
 
 @ACC_TYPES.register("TemperatureSensor")

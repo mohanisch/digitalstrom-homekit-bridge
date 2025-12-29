@@ -1,4 +1,3 @@
-
 from prometheus_client import Counter, Summary, Gauge
 
 REQUESTS = Counter('http_request_total', 'Total number of requests')

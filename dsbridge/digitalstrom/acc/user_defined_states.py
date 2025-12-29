@@ -28,7 +28,7 @@ class UserDefinedStates:
                     "application": user_defined_state['type'],
                     "service": user_defined_state['type'],
                     "chars": None,
-                    "support": None,
+                    "support": {},
                     "zone": "Benutzerdefinierte Zustände",
                     "model": "Benutzerdefinierte Zustand"
                 }

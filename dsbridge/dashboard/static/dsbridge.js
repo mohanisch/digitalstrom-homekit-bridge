@@ -4,13 +4,26 @@ $(document).ready(function () {
         device_subapplication: {}
     };
 
+    // Initialize checked devices and subapplications from page load
     $.each($('input.entityid'), function() {
         if ($(this).is(':checked') == true) {
             var entityid = $(this).data('entityid')
             checkedDevices.devices.push(entityid);
+
+            // Also initialize subapplication if select exists and has a selected value
+            var $select = $('select.subapplication[data-entityid="' + entityid + '"]');
+            if ($select.length > 0) {
+                var selectedOption = $select.find(':selected');
+                if (selectedOption.length > 0) {
+                    var sub_app = selectedOption.data('subapplication');
+                    if (sub_app) {
+                        checkedDevices.device_subapplication[entityid] = sub_app;
+                    }
+                }
+            }
         }
     });
-    console.log(checkedDevices)
+    console.log('Initialized checkedDevices:', checkedDevices)
 
     $('input.entityid').on('change', function(e){
         var entityid = $(this).data('entityid')
@@ -63,8 +76,23 @@ $(document).ready(function () {
             success: function(result) {
                 console.log("return: "  + result);
                 if(result['ok']) {
-                    setTimeout(function(){ window.location.href='/onboarding/pairing'; }, 3000);
+                    $('#main-mid').waitMe('hide');
+                    // Show success message and redirect to dashboard
+                    alert('Konfiguration erfolgreich gespeichert!');
+                    setTimeout(function(){ window.location.href='/'; }, 500);
+                } else {
+                    $('#main-mid').waitMe('hide');
+                    alert('Fehler beim Speichern: ' + (result.error || 'Unbekannter Fehler'));
                 }
+            },
+            error: function(xhr) {
+                $('#main-mid').waitMe('hide');
+                var errorMsg = 'Fehler beim Speichern';
+                try {
+                    var result = JSON.parse(xhr.responseText);
+                    errorMsg = result.error || errorMsg;
+                } catch(e) {}
+                alert(errorMsg);
             }
         });
     });

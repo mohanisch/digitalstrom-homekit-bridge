@@ -1,52 +1,1550 @@
-<html>
-    <head>
-        <title>HomeKit</title>
-        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
-        <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>HomeKit Bridge - Dashboard</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
 
-        <script src="{{ url_for('static', filename='jquery-3.4.1.min.js') }}"></script>
-        <script>
-            $(document).ready(function(){
-                $('input#restart-bridge').click( function() {
+    <script src="{{ url_for('static', filename='jquery-3.4.1.min.js') }}"></script>
+    <script>
+        $(document).ready(function(){
+            // Menu toggle functionality
+            var $menuToggle = $('#menu-toggle');
+            var $menuClose = $('#menu-close');
+            var $menuDrawer = $('#menu-drawer');
+            var $menuOverlay = $('#menu-overlay');
+
+            function openMenu() {
+                $menuDrawer.addClass('open');
+                $menuOverlay.addClass('open');
+                $('body').css('overflow', 'hidden');
+            }
+
+            function closeMenu() {
+                $menuDrawer.removeClass('open');
+                $menuOverlay.removeClass('open');
+                $('body').css('overflow', '');
+            }
+
+            $menuToggle.on('click', function(e) {
+                e.stopPropagation();
+                openMenu();
+            });
+
+            $menuClose.on('click', function(e) {
+                e.stopPropagation();
+                closeMenu();
+            });
+
+            $menuOverlay.on('click', function() {
+                closeMenu();
+            });
+
+            // Close menu on escape key
+            $(document).on('keydown', function(e) {
+                if (e.key === 'Escape' && $menuDrawer.hasClass('open')) {
+                    closeMenu();
+                }
+            });
+
+            // Restart bridge functionality
+            function restartBridge() {
+                if (confirm('Möchten Sie die Bridge wirklich neu starten?')) {
+                    var $btn = $('#restart-bridge-menu');
+                    $btn.prop('disabled', true).find('span').text('Wird neu gestartet...');
                     $.ajax({
                         url: "/restart-bridge",
                         type: 'post',
                         dataType: 'json',
                         data: JSON.stringify(""),
-                        contentType: 'application/json'
+                        contentType: 'application/json',
+                        success: function() {
+                            alert('Bridge wird neu gestartet...');
+                            closeMenu();
+                        },
+                        error: function() {
+                            $btn.prop('disabled', false).find('span').text('Bridge neu starten');
+                            alert('Fehler beim Neustarten der Bridge');
+                        }
+                    });
+                }
+            }
+
+            $('#restart-bridge-menu').on('click', function() {
+                restartBridge();
+            });
+
+            // Icon mapping for JavaScript (matches Python function)
+            function getBootstrapIcon(application, isActive) {
+                var iconMap = {
+                    'lights': 'lightbulb', 'light': 'lightbulb',
+                    'shades': 'layers', 'shade': 'layers', 'window': 'layers',
+                    'temperature': 'thermometer-half',
+                    'humidity': 'droplet',
+                    'brightness': 'sun',
+                    'motion': 'person-walking',
+                    'switch': 'power', 'button': 'circle',
+                    'joker': 'toggle-on',
+                    'manualstate': 'sliders',
+                    'absent': 'door-opened',
+                    'audio': 'speaker', 'speaker': 'speaker',
+                    'sprinkler': 'droplet-fill',
+                };
+
+                var appNormalized = (application || '').toLowerCase().trim().replace(/\s+/g, '');
+                var baseIcon = iconMap[appNormalized] || 'circle';
+
+                // Special handling for absent: active = absent (door-open), inactive = present (door-closed)
+                if (baseIcon === 'door-opened') {
+                    return isActive ? 'door-closed' : 'door-opened';
+                }
+
+                if (!isActive) {
+                    var offVariants = {
+                        'lightbulb': 'lightbulb-off',
+                        'power': 'power',
+                        'toggle-on': 'toggle-off',
+                        'layers': 'layers',  // Shades stay the same
+                        'speaker': 'speaker',
+                        'tv': 'tv',
+                        'camera': 'camera-off',
+                        'lock': 'unlock',
+                        'bell-fill': 'bell',
+                        'bell': 'bell-slash',
+                    };
+                    if (offVariants[baseIcon]) {
+                        baseIcon = offVariants[baseIcon];
+                    }
+                }
+
+                return baseIcon;
+            }
+
+            // Function to update device status via AJAX
+            function updateDeviceStatus(entityId, $tile, deviceData) {
+                // If deviceData is provided (from SSE), use it directly instead of making a request
+                var result;
+                if (deviceData) {
+                    result = {
+                        ok: true,
+                        on: deviceData.on,
+                        state: deviceData.state
+                    };
+                        // Process immediately without AJAX
+                        processDeviceStatusUpdate(result, $tile);
+                } else {
+                    // Fallback: fetch via AJAX if no data provided
+                    $.ajax({
+                        url: "/device-status/" + encodeURIComponent(entityId),
+                        type: 'get',
+                        dataType: 'json',
+                        success: function(result) {
+                            processDeviceStatusUpdate(result, $tile);
+                        },
+                        error: function() {
+                            // Silently fail - status will be correct on next update
+                        }
+                    });
+                }
+            }
+
+                function processDeviceStatusUpdate(result, $tile) {
+                    if (!result.ok) {
+                        return;
+                    }
+                    
+                    if (!result.state || !result.state.states) {
+                        return;
+                    }
+                    
+                    var entityId = $tile.data('entity-id');
+                var isDimmable = $tile.data('dimmable') === true;
+                var isShade = $tile.data('shade') === true;
+                var supportsColor = $tile.data('color') === true;
+                var application = $tile.data('application') || '';
+                var isActive = result.on;
+
+                // Update icon based on state
+                var $icon = $tile.find('.device-icon');
+
+                var supportsColortemp = $tile.find('.colortemp-slider').length > 0;
+
+                if (supportsColor || supportsColortemp) {
+                    var $colorMenu = $tile.find('.device-color-menu');
+
+                    // Update RGB color display if supported
+                    if (supportsColor && $colorMenu.length > 0) {
+                        var hue = result.state.states.hue ? result.state.states.hue.value : 0;
+                        var saturation = result.state.states.saturation ? result.state.states.saturation.value : 0;
+                        $colorMenu.find('.current-color').css('background', 'hsl(' + hue + ', ' + saturation + '%, 50%)');
+                    }
+
+                    // Update colortemp slider if supported
+                    if (supportsColortemp) {
+                        var colortemp = result.state.states.colortemp ? result.state.states.colortemp.value : 0;
+                        var $colortempSlider = $tile.find('.colortemp-slider');
+                        var $colortempValue = $tile.find('.colortemp-value');
+                        if ($colortempSlider.length > 0) {
+                            $colortempSlider.val(colortemp);
+                            $colortempValue.text(Math.round(colortemp) + '%');
+                        }
+                    }
+
+                    // Update card state based on brightness and on status
+                    var brightness = result.state.states.brightness ? result.state.states.brightness.value : 0;
+                    // If device is off, brightness should be 0 regardless of actual brightness value
+                    if (!result.on) {
+                        brightness = 0;
+                    }
+                    isActive = result.on && brightness > 0;
+                    if (isActive) {
+                        $tile.removeClass('state_inactive').addClass('state_active');
+                    } else {
+                        $tile.removeClass('state_active').addClass('state_inactive');
+                    }
+
+                    // Update icon
+                    if ($icon.length > 0 && application) {
+                        var iconName = getBootstrapIcon(application, isActive);
+                        $icon.attr('class', 'bi bi-' + iconName + ' device-icon');
+                    }
+                } else if (isShade) {
+                    // Update shade position slider
+                    var position = result.state.states.shadePositionOutside ? result.state.states.shadePositionOutside.value : 0;
+                    var $slider = $tile.find('.shade-slider');
+                    var $value = $tile.find('.brightness-value');
+
+                    $slider.val(position);
+                    $value.text(Math.round(position) + '%');
+
+                    // Update card state
+                    isActive = position > 0;
+                    if (position > 0) {
+                        $tile.removeClass('state_inactive').addClass('state_active');
+                    } else {
+                        $tile.removeClass('state_active').addClass('state_inactive');
+                    }
+
+                    // Update icon
+                    if ($icon.length > 0 && application) {
+                        var iconName = getBootstrapIcon(application, isActive);
+                        $icon.attr('class', 'bi bi-' + iconName + ' device-icon');
+                    }
+                } else if (isDimmable) {
+                    // Update brightness
+                    var brightness = result.state.states.brightness ? result.state.states.brightness.value : 0;
+                    // If device is off, brightness should be 0 regardless of actual brightness value
+                    if (!result.on) {
+                        brightness = 0;
+                    }
+                    var $slider = $tile.find('.brightness-slider');
+                    var $status = $tile.find('.device-status');
+
+                    // Update status text with brightness percentage (rounded to integer)
+                    $status.text(Math.round(brightness) + '%');
+
+                    // Update slider in card if it exists
+                    if ($slider.length > 0) {
+                        $slider.val(brightness);
+                    }
+
+                    // Update slider in overlay if it exists
+                    var $overlaySlider = $('.device-color-menu[data-entity-id="' + entityId + '"]').find('.brightness-slider, .color-brightness-slider');
+                    if ($overlaySlider.length > 0) {
+                        $overlaySlider.val(brightness);
+                    }
+
+                    // Update card state - use result.on for dimmable devices
+                    isActive = result.on && brightness > 0;
+                    if (isActive) {
+                        $tile.removeClass('state_inactive').addClass('state_active');
+                    } else {
+                        $tile.removeClass('state_active').addClass('state_inactive');
+                    }
+
+                    // Update icon
+                    if ($icon.length > 0 && application) {
+                        var iconName = getBootstrapIcon(application, isActive);
+                        $icon.attr('class', 'bi bi-' + iconName + ' device-icon');
+                    }
+                } else {
+                    // Update status text
+                    var $status = $tile.find('.device-status');
+                    var newState = result.on ? 'Ein' : 'Aus';
+                    var newStateClass = result.on ? 'active' : 'inactive';
+
+                    $tile.removeClass('state_active state_inactive').addClass('state_' + newStateClass);
+                    $status.text(newState);
+
+                    // Update icon
+                    if ($icon.length > 0 && application) {
+                        var iconName = getBootstrapIcon(application, isActive);
+                        $icon.attr('class', 'bi bi-' + iconName + ' device-icon');
+                    }
+                }
+            }
+
+            // Handle brightness slider changes
+            var brightnessTimeout = {};
+            var shadeTimeout = {};
+
+            $('.brightness-slider').on('input', function() {
+                var $slider = $(this);
+                var entityId = $slider.data('entity-id');
+                var brightness = Math.max(0, Math.min(100, parseInt($slider.val()) || 0)); // Clamp between 0-100
+                var $card = $slider.closest('.device-card');
+                var $value = $slider.siblings('.brightness-value');
+
+                // Ensure value is clamped
+                if (brightness < 0) brightness = 0;
+                if (brightness > 100) brightness = 100;
+                $slider.val(brightness);
+
+                // Update value display immediately (rounded to integer)
+                $value.text(Math.round(brightness) + '%');
+
+                // Update card state based on brightness
+                var isActive = brightness > 0;
+                if (brightness > 0) {
+                    $card.removeClass('state_inactive').addClass('state_active');
+                } else {
+                    $card.removeClass('state_active').addClass('state_inactive');
+                }
+
+                // Update icon based on state
+                var application = $card.data('application') || '';
+                var $icon = $card.find('.device-icon');
+                if ($icon.length > 0 && application) {
+                    var iconName = getBootstrapIcon(application, isActive);
+                    $icon.attr('class', 'bi bi-' + iconName + ' device-icon');
+                }
+            });
+
+            $('.brightness-slider').on('change', function() {
+                var $slider = $(this);
+                var entityId = $slider.data('entity-id');
+                var brightness = Math.max(0, Math.min(100, parseInt($slider.val()) || 0)); // Clamp between 0-100
+                var $card = $slider.closest('.device-card');
+
+                // Ensure value is clamped
+                if (brightness < 0) brightness = 0;
+                if (brightness > 100) brightness = 100;
+                $slider.val(brightness);
+
+                // Debounce API call
+                clearTimeout(brightnessTimeout[entityId]);
+                brightnessTimeout[entityId] = setTimeout(function() {
+                    $.ajax({
+                        url: "/set-brightness",
+                        type: 'post',
+                        dataType: 'json',
+                        data: JSON.stringify({
+                            entity_id: entityId,
+                            brightness: brightness
+                        }),
+                        contentType: 'application/json',
+                        success: function(result) {
+                            if (!result.ok) {
+                                alert('Fehler: ' + (result.error || 'Unbekannter Fehler'));
+                                setTimeout(function() {
+                                    updateDeviceStatus(entityId, $card);
+                                }, 500);
+                            }
+                        },
+                        error: function(xhr) {
+                            var errorMsg = 'Fehler beim Setzen der Helligkeit';
+                            try {
+                                var result = JSON.parse(xhr.responseText);
+                                errorMsg = result.error || errorMsg;
+                            } catch(e) {}
+                            alert(errorMsg);
+                            setTimeout(function() {
+                                updateDeviceStatus(entityId, $card);
+                            }, 500);
+                        }
+                    });
+                }, 300);
+            });
+
+            // Initialize color wheels
+            function initColorWheel(canvas) {
+                if (!canvas || !canvas.parentElement) {
+                    console.error('Canvas or container not found');
+                    return;
+                }
+
+                // Fixed size: 250px
+                var size = 250;
+
+                // Set canvas dimensions
+                canvas.width = size;
+                canvas.height = size;
+                canvas.style.width = size + 'px';
+                canvas.style.height = size + 'px';
+
+                var ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    console.error('Could not get 2D context');
+                    return;
+                }
+
+                var size = canvas.width;
+                if (size <= 0) {
+                    console.error('Invalid canvas size:', size);
+                    return;
+                }
+
+                var center = size / 2;
+                var radius = Math.max(10, Math.min(center - 10, center * 0.9));
+
+                // Clear canvas first
+                ctx.clearRect(0, 0, size, size);
+
+                // Draw color wheel
+                for (var angle = 0; angle < 360; angle += 0.5) {
+                    var startAngle = (angle - 0.5) * Math.PI / 180;
+                    var endAngle = (angle + 0.5) * Math.PI / 180;
+
+                    ctx.beginPath();
+                    ctx.moveTo(center, center);
+                    ctx.arc(center, center, radius, startAngle, endAngle);
+                    ctx.closePath();
+
+                    var hue = angle;
+                    var saturation = 100;
+                    var lightness = 50;
+                    ctx.fillStyle = 'hsl(' + hue + ', ' + saturation + '%, ' + lightness + '%)';
+                    ctx.fill();
+                }
+
+                // Draw white center circle
+                var innerRadius = radius * 0.3;
+                if (innerRadius > 0) {
+                    ctx.beginPath();
+                    ctx.arc(center, center, innerRadius, 0, 2 * Math.PI);
+                    ctx.fillStyle = 'white';
+                    ctx.fill();
+                }
+            }
+
+            // Ensure all color menus are hidden on page load and prevent any rendering
+            $(document).ready(function() {
+                $('.device-color-menu').each(function() {
+                    var $menu = $(this);
+                    // Completely hide and remove from layout
+                    $menu.hide();
+                    $menu.css({
+                        'display': 'none',
+                        'visibility': 'hidden',
+                        'opacity': '0',
+                        'transform': 'translateY(100%)',
+                        'pointer-events': 'none',
+                        'position': 'fixed',
+                        'bottom': '0',
+                        'left': '0',
+                        'right': '0'
                     });
                 });
             });
 
-         </script>
-    </head>
-    <body>
+            // Handle color wheel interaction
+            var isDragging = false;
+            var currentHue = 0;
+            var currentSaturation = 0;
 
-        <div style="margin: 0 auto;">
-            <div id="main-bottom">
-                <input type="button" id="restart-bridge" class="button-green forms" value="Restart">
+            function getColorFromWheel(canvas, x, y) {
+                var rect = canvas.getBoundingClientRect();
+                var centerX = rect.left + rect.width / 2;
+                var centerY = rect.top + rect.height / 2;
+                var dx = x - centerX;
+                var dy = y - centerY;
+                var distance = Math.sqrt(dx * dx + dy * dy);
+                var radius = (rect.width / 2) - 10;
+                var innerRadius = radius * 0.3;
+
+                if (distance > radius) {
+                    return null; // Outside wheel
+                }
+
+                if (distance < innerRadius) {
+                    return {hue: currentHue, saturation: 0, lightness: 50}; // White center
+                }
+
+                var angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                if (angle < 0) angle += 360;
+
+                var saturation = ((distance - innerRadius) / (radius - innerRadius)) * 100;
+                saturation = Math.min(100, Math.max(0, saturation));
+
+                return {hue: angle, saturation: saturation, lightness: 50};
+            }
+
+            function updateColorIndicator(canvas, color) {
+                if (!color) return;
+                var $indicator = $(canvas).siblings('.color-wheel-indicator');
+                var rect = canvas.getBoundingClientRect();
+                var center = rect.width / 2;
+                var radius = center - 10;
+                var innerRadius = radius * 0.3;
+                var distance = innerRadius + (color.saturation / 100) * (radius - innerRadius);
+                var angle = color.hue * Math.PI / 180;
+
+                var x = center + Math.cos(angle) * distance;
+                var y = center + Math.sin(angle) * distance;
+
+                $indicator.css({
+                    'left': x + 'px',
+                    'top': y + 'px'
+                });
+
+                currentHue = color.hue;
+                currentSaturation = color.saturation;
+            }
+
+            var colorUpdateTimeout = {};
+            function sendColorUpdate(entityId, hue, saturation) {
+                clearTimeout(colorUpdateTimeout[entityId]);
+                colorUpdateTimeout[entityId] = setTimeout(function() {
+                    $.ajax({
+                        url: "/set-color",
+                        type: 'post',
+                        dataType: 'json',
+                        data: JSON.stringify({
+                            entity_id: entityId,
+                            hue: Math.round(hue),
+                            saturation: Math.round(saturation)
+                        }),
+                        contentType: 'application/json',
+                        success: function(result) {
+                            if (!result.ok) {
+                                console.error('Color update error:', result.error);
+                            }
+                        },
+                        error: function(xhr) {
+                            console.error('Color update failed');
+                        }
+                    });
+                }, 150);
+            }
+
+            $(document).on('mousedown touchstart', '.color-wheel', function(e) {
+                e.preventDefault();
+                isDragging = true;
+                var canvas = this;
+                var x = (e.type === 'touchstart') ? e.originalEvent.touches[0].clientX : e.clientX;
+                var y = (e.type === 'touchstart') ? e.originalEvent.touches[0].clientY : e.clientY;
+                var color = getColorFromWheel(canvas, x, y);
+                if (color) {
+                    updateColorIndicator(canvas, color);
+                    sendColorUpdate($(canvas).data('entity-id'), color.hue, color.saturation);
+                }
+            });
+
+            $(document).on('mousemove touchmove', '.color-wheel', function(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                var canvas = this;
+                var x = (e.type === 'touchmove') ? e.originalEvent.touches[0].clientX : e.clientX;
+                var y = (e.type === 'touchmove') ? e.originalEvent.touches[0].clientY : e.clientY;
+                var color = getColorFromWheel(canvas, x, y);
+                if (color) {
+                    updateColorIndicator(canvas, color);
+                    sendColorUpdate($(canvas).data('entity-id'), color.hue, color.saturation);
+                }
+            });
+
+            $(document).on('mouseup touchend', function(e) {
+                isDragging = false;
+            });
+
+            // Handle device settings menu toggle (iOS-style bottom sheet)
+            $(document).on('click', '.device-color-menu-toggle', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                // Don't let the card click handler process this
+                var entityId = $(this).data('entity-id');
+                var $menu = $('.device-color-menu[data-entity-id="' + entityId + '"]');
+                var $overlay = $('.device-color-menu-overlay[data-entity-id="' + entityId + '"]');
+
+                // Close all other menus first
+                $('.device-color-menu').not($menu).removeClass('open').css({
+                    'display': 'none',
+                    'visibility': 'hidden',
+                    'opacity': '0'
+                });
+                $('.device-color-menu-overlay').not($overlay).removeClass('open');
+
+                // Toggle this menu and overlay
+                if ($menu.hasClass('open')) {
+                    // Close menu - remove open class first to trigger animation
+                    $menu.removeClass('open');
+                    $overlay.removeClass('open');
+                    $('body').removeClass('menu-open');
+                    setTimeout(function() {
+                        $menu.css({
+                            'display': 'none',
+                            'visibility': 'hidden',
+                            'opacity': '0',
+                            'transform': 'translateY(100%)'
+                        });
+                        $overlay.css({
+                            'display': 'none',
+                            'visibility': 'hidden',
+                            'opacity': '0'
+                        });
+                        $('body').css('overflow', '');
+                    }, 400); // Wait for animation
+                } else {
+                    // Add blur class to body for main content blur
+                    $('body').addClass('menu-open');
+
+                    // Show menu first (but keep it off-screen) to get proper dimensions
+                    $menu.css({
+                        'display': 'flex',
+                        'visibility': 'visible',
+                        'opacity': '1',
+                        'transform': 'translateY(100%)',
+                        'position': 'fixed',
+                        'bottom': '0',
+                        'left': '0',
+                        'right': '0',
+                        'pointer-events': 'none'
+                    });
+                    $overlay.css({
+                        'display': 'block',
+                        'visibility': 'visible',
+                        'opacity': '0'
+                    });
+
+                    // Force reflow to ensure dimensions are calculated
+                    $menu[0].offsetHeight;
+
+                    // Initialize color wheel AFTER menu is in DOM with proper dimensions
+                    var $wheel = $menu.find('.color-wheel');
+                    if ($wheel.length && !$wheel.data('initialized')) {
+                        // Wait a bit for container to have dimensions
+                        setTimeout(function() {
+                            try {
+                                initColorWheel($wheel[0]);
+                                $wheel.data('initialized', true);
+                            } catch (e) {
+                                console.error('Error initializing color wheel:', e);
+                            }
+
+                            // Now animate in - add open class which triggers transform animation
+                            setTimeout(function() {
+                                $menu.addClass('open');
+                                $overlay.addClass('open');
+                                $('body').css('overflow', 'hidden');
+                            }, 10);
+                        }, 50);
+                    } else {
+                        // No wheel or already initialized, just open
+                        setTimeout(function() {
+                            $menu.addClass('open');
+                            $overlay.addClass('open');
+                            $('body').css('overflow', 'hidden');
+                        }, 10);
+                    }
+                }
+            });
+
+            // Close menu when clicking overlay
+            $(document).on('click', '.device-color-menu-overlay', function(e) {
+                var entityId = $(this).data('entity-id');
+                var $menu = $('.device-color-menu[data-entity-id="' + entityId + '"]');
+                var $overlay = $(this);
+
+                $menu.removeClass('open');
+                $overlay.removeClass('open');
+                $('body').removeClass('menu-open');
+                setTimeout(function() {
+                    $menu.css({
+                        'display': 'none',
+                        'visibility': 'hidden',
+                        'opacity': '0',
+                        'transform': 'translateY(100%)'
+                    });
+                    $overlay.css({
+                        'display': 'none',
+                        'visibility': 'hidden',
+                        'opacity': '0'
+                    });
+                    $('body').css('overflow', '');
+                }, 400);
+            });
+
+            // Close menu when clicking outside (fallback)
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.device-color-menu').length &&
+                    !$(e.target).closest('.device-color-menu-toggle').length &&
+                    !$(e.target).closest('.device-color-menu-overlay').length) {
+                    $('.device-color-menu').each(function() {
+                        var $menu = $(this);
+                        if ($menu.hasClass('open')) {
+                            $menu.removeClass('open');
+                            var entityId = $menu.data('entity-id');
+                            var $overlay = $('.device-color-menu-overlay[data-entity-id="' + entityId + '"]');
+                            $overlay.removeClass('open');
+                            setTimeout(function() {
+                                $menu.css({
+                                    'display': 'none',
+                                    'visibility': 'hidden',
+                                    'opacity': '0',
+                                    'transform': 'translateY(100%)'
+                                });
+                                $overlay.css({
+                                    'display': 'none',
+                                    'visibility': 'hidden',
+                                    'opacity': '0'
+                                });
+                            }, 400);
+                        }
+                    });
+                    $('body').removeClass('menu-open');
+                    $('body').css('overflow', '');
+                }
+            });
+
+            // Handle color menu close button
+            $(document).on('click', '.color-menu-close', function(e) {
+                e.stopPropagation();
+                var $menu = $(this).closest('.device-color-menu');
+                var entityId = $menu.data('entity-id');
+                var $overlay = $('.device-color-menu-overlay[data-entity-id="' + entityId + '"]');
+
+                $menu.removeClass('open');
+                $overlay.removeClass('open');
+                $('body').removeClass('menu-open');
+                setTimeout(function() {
+                    $menu.css({
+                        'display': 'none',
+                        'visibility': 'hidden',
+                        'opacity': '0',
+                        'transform': 'translateY(100%)'
+                    });
+                    $overlay.css({
+                        'display': 'none',
+                        'visibility': 'hidden',
+                        'opacity': '0'
+                    });
+                    $('body').css('overflow', '');
+                }, 400);
+            });
+
+            // Handle brightness slider for color picker
+            var colorBrightnessTimeout = {};
+            $(document).on('input', '.color-brightness-slider', function() {
+                var $slider = $(this);
+                var entityId = $slider.data('entity-id');
+                var brightness = Math.max(0, Math.min(100, parseInt($slider.val()) || 50));
+                var $card = $('.device-card[data-entity-id="' + entityId + '"]');
+                var $status = $card.find('.device-status');
+
+                // Update card status immediately (rounded to integer)
+                $status.text(Math.round(brightness) + '%');
+
+                // Update card state based on brightness
+                var isActive = brightness > 0;
+                if (brightness > 0) {
+                    $card.removeClass('state_inactive').addClass('state_active');
+                } else {
+                    $card.removeClass('state_active').addClass('state_inactive');
+                }
+
+                // Update icon
+                var application = $card.data('application') || '';
+                var $icon = $card.find('.device-icon');
+                if ($icon.length > 0 && application) {
+                    var iconName = getBootstrapIcon(application, isActive);
+                    $icon.attr('class', 'bi bi-' + iconName + ' device-icon');
+                }
+
+                clearTimeout(colorBrightnessTimeout[entityId]);
+                colorBrightnessTimeout[entityId] = setTimeout(function() {
+                    // Get current hue/saturation from wheel and send with brightness
+                    sendColorUpdate(entityId, currentHue, currentSaturation);
+                }, 300);
+            });
+
+            // Handle brightness slider in overlay (for non-color lights)
+            $(document).on('input', '.device-color-menu .brightness-slider', function() {
+                var $slider = $(this);
+                var entityId = $slider.data('entity-id');
+                var brightness = Math.max(0, Math.min(100, parseInt($slider.val()) || 0));
+                var $card = $('.device-card[data-entity-id="' + entityId + '"]');
+                var $status = $card.find('.device-status');
+
+                // Update card status immediately (rounded to integer)
+                $status.text(Math.round(brightness) + '%');
+
+                // Update card state based on brightness
+                var isActive = brightness > 0;
+                if (brightness > 0) {
+                    $card.removeClass('state_inactive').addClass('state_active');
+                } else {
+                    $card.removeClass('state_active').addClass('state_inactive');
+                }
+
+                // Update icon
+                var application = $card.data('application') || '';
+                var $icon = $card.find('.device-icon');
+                if ($icon.length > 0 && application) {
+                    var iconName = getBootstrapIcon(application, isActive);
+                    $icon.attr('class', 'bi bi-' + iconName + ' device-icon');
+                }
+            });
+
+            $(document).on('change', '.device-color-menu .brightness-slider', function() {
+                var $slider = $(this);
+                var entityId = $slider.data('entity-id');
+                var brightness = Math.max(0, Math.min(100, parseInt($slider.val()) || 0));
+
+                // Debounce API call
+                clearTimeout(brightnessTimeout[entityId]);
+                brightnessTimeout[entityId] = setTimeout(function() {
+                    $.ajax({
+                        url: "/set-brightness",
+                        type: 'post',
+                        dataType: 'json',
+                        data: JSON.stringify({
+                            entity_id: entityId,
+                            brightness: brightness
+                        }),
+                        contentType: 'application/json',
+                        success: function(result) {
+                            if (!result.ok) {
+                                alert('Fehler: ' + (result.error || 'Unbekannter Fehler'));
+                                setTimeout(function() {
+                                    updateDeviceStatus(entityId, $('.device-card[data-entity-id="' + entityId + '"]'));
+                                }, 500);
+                            }
+                        },
+                        error: function(xhr) {
+                            var errorMsg = 'Fehler beim Setzen der Helligkeit';
+                            try {
+                                var result = JSON.parse(xhr.responseText);
+                                errorMsg = result.error || errorMsg;
+                            } catch(e) {}
+                            alert(errorMsg);
+                            setTimeout(function() {
+                                updateDeviceStatus(entityId, $('.device-card[data-entity-id="' + entityId + '"]'));
+                            }, 500);
+                        }
+                    });
+                }, 300);
+            });
+
+            // Handle colortemp slider
+            var colortempTimeout = {};
+            $(document).on('input', '.colortemp-slider', function() {
+                var $slider = $(this);
+                var colortemp = Math.max(0, Math.min(100, parseInt($slider.val()) || 0));
+                $slider.val(colortemp);
+            });
+
+            $(document).on('change', '.colortemp-slider', function() {
+                var $slider = $(this);
+                var entityId = $slider.data('entity-id');
+                var colortemp = Math.max(0, Math.min(100, parseInt($slider.val()) || 0));
+
+                // Debounce API call
+                clearTimeout(colortempTimeout[entityId]);
+                colortempTimeout[entityId] = setTimeout(function() {
+                    $.ajax({
+                        url: "/set-colortemp",
+                        type: 'post',
+                        dataType: 'json',
+                        data: JSON.stringify({
+                            entity_id: entityId,
+                            colortemp: colortemp
+                        }),
+                        contentType: 'application/json',
+                        success: function(result) {
+                            if (!result.ok) {
+                                console.error('Colortemp update error:', result.error);
+                            }
+                        },
+                        error: function(xhr) {
+                            console.error('Colortemp update failed');
+                        }
+                    });
+                }, 300);
+            });
+
+            // Handle shade slider changes
+            $('.shade-slider').on('input', function() {
+                var $slider = $(this);
+                var entityId = $slider.data('entity-id');
+                var position = Math.max(0, Math.min(100, parseInt($slider.val()) || 0)); // Clamp between 0-100
+                var $card = $slider.closest('.device-card');
+                var $value = $slider.siblings('.brightness-value');
+
+                // Ensure value is clamped
+                if (position < 0) position = 0;
+                if (position > 100) position = 100;
+                $slider.val(position);
+
+                // Update value display immediately (rounded to integer)
+                $value.text(Math.round(position) + '%');
+
+                // Update card state based on position
+                var isActive = position > 0;
+                if (position > 0) {
+                    $card.removeClass('state_inactive').addClass('state_active');
+                } else {
+                    $card.removeClass('state_active').addClass('state_inactive');
+                }
+
+                // Update icon based on state
+                var application = $card.data('application') || '';
+                var $icon = $card.find('.device-icon');
+                if ($icon.length > 0 && application) {
+                    var iconName = getBootstrapIcon(application, isActive);
+                    $icon.attr('class', 'bi bi-' + iconName + ' device-icon');
+                }
+            });
+
+            $('.shade-slider').on('change', function() {
+                var $slider = $(this);
+                var entityId = $slider.data('entity-id');
+                var position = Math.max(0, Math.min(100, parseInt($slider.val()) || 0)); // Clamp between 0-100
+                var $card = $slider.closest('.device-card');
+
+                // Ensure value is clamped
+                if (position < 0) position = 0;
+                if (position > 100) position = 100;
+                $slider.val(position);
+
+                // Debounce API call
+                clearTimeout(shadeTimeout[entityId]);
+                shadeTimeout[entityId] = setTimeout(function() {
+                    $.ajax({
+                        url: "/set-shade-position",
+                        type: 'post',
+                        dataType: 'json',
+                        data: JSON.stringify({
+                            entity_id: entityId,
+                            position: position
+                        }),
+                        contentType: 'application/json',
+                        success: function(result) {
+                            if (!result.ok) {
+                                alert('Fehler: ' + (result.error || 'Unbekannter Fehler'));
+                                setTimeout(function() {
+                                    updateDeviceStatus(entityId, $card);
+                                }, 500);
+                            }
+                        },
+                        error: function(xhr) {
+                            var errorMsg = 'Fehler beim Setzen der Position';
+                            try {
+                                var result = JSON.parse(xhr.responseText);
+                                errorMsg = result.error || errorMsg;
+                            } catch(e) {}
+                            alert(errorMsg);
+                            setTimeout(function() {
+                                updateDeviceStatus(entityId, $card);
+                            }, 500);
+                        }
+                    });
+                }, 300);
+            });
+
+            // Handle device clicks for toggling - use event delegation for dynamically loaded content
+            $(document).on('click', '.device-card, .device-tile', function(e) {
+                var $tile = $(this);
+                var $target = $(e.target);
+
+                // Don't toggle if device is unavailable
+                if ($tile.hasClass('unavailable') || $tile.data('available') === false) {
+                    return;
+                }
+
+                // Block if clicking on the settings toggle button
+                if ($target.closest('.device-color-menu-toggle').length > 0) {
+                    return;
+                }
+
+                // Block other interactive elements
+                if ($target.hasClass('brightness-slider') ||
+                    $target.hasClass('shade-slider') ||
+                    $target.hasClass('color-swatch') ||
+                    $target.closest('.brightness-control').length ||
+                    $target.closest('.device-color-menu').length) {
+                    return;
+                }
+
+                // All other clicks should toggle the device
+                var entityId = $tile.data('entity-id');
+                var isDimmable = $tile.data('dimmable') === true;
+
+                if (!entityId) {
+                    return; // Skip if no entity ID
+                }
+
+                var isShade = $tile.data('shade') === true;
+
+                // For shades, toggle between 0% and 100%
+                if (isShade) {
+                    var $slider = $tile.find('.shade-slider');
+                    var $value = $tile.find('.brightness-value');
+                    var $icon = $tile.find('.device-icon');
+                    var application = $tile.data('application') || '';
+                    var currentPosition = parseInt($slider.val()) || 0;
+                    var newPosition;
+
+                    if (currentPosition > 0) {
+                        // Close (set to 0%)
+                        newPosition = 0;
+                    } else {
+                        // Open (set to 100%)
+                        newPosition = 100;
+                    }
+
+                    // Update slider value
+                    $slider.val(newPosition);
+
+                    // Update value display (rounded to integer)
+                    $value.text(Math.round(newPosition) + '%');
+
+                    // Update card state immediately
+                    var isActive = newPosition > 0;
+                    if (newPosition > 0) {
+                        $tile.removeClass('state_inactive').addClass('state_active');
+                    } else {
+                        $tile.removeClass('state_active').addClass('state_inactive');
+                    }
+
+                    // Update icon based on new state
+                    if ($icon.length > 0 && application) {
+                        var iconName = getBootstrapIcon(application, isActive);
+                        $icon.attr('class', 'bi bi-' + iconName + ' device-icon');
+                    }
+
+                    // Trigger change event to send to API
+                    $slider.trigger('change');
+                    return;
+                }
+
+                // For dimmable devices, toggle on/off by setting brightness
+                // But only if the slider exists in the card (not in overlay)
+                if (isDimmable) {
+                    var $slider = $tile.find('.brightness-slider');
+                    // If slider is not in card (it's in overlay), fall through to normal toggle
+                    if ($slider.length === 0) {
+                        // Fall through to normal toggle below
+                    } else {
+                        var $value = $tile.find('.brightness-value');
+                        var $icon = $tile.find('.device-icon');
+                        var application = $tile.data('application') || '';
+                        var currentBrightness = parseInt($slider.val()) || 0;
+                        var newBrightness;
+
+                        if (currentBrightness > 0) {
+                            // Turn off (set to 0)
+                            newBrightness = 0;
+                        } else {
+                            // Turn on (set to 50% as default)
+                            newBrightness = 50;
+                        }
+
+                        // Update slider value
+                        $slider.val(newBrightness);
+
+                    // Update value display (rounded to integer)
+                    $value.text(Math.round(newBrightness) + '%');
+
+                        // Update card state immediately
+                        var isActive = newBrightness > 0;
+                        if (newBrightness > 0) {
+                            $tile.removeClass('state_inactive').addClass('state_active');
+                        } else {
+                            $tile.removeClass('state_active').addClass('state_inactive');
+                        }
+
+                        // Update icon based on new state
+                        if ($icon.length > 0 && application) {
+                            var iconName = getBootstrapIcon(application, isActive);
+                            $icon.attr('class', 'bi bi-' + iconName + ' device-icon');
+                        }
+
+                        // Trigger change event to send to API
+                        $slider.trigger('change');
+                        return;
+                    }
+                }
+
+                // Disable tile during toggle
+                $tile.css('opacity', '0.6').css('pointer-events', 'none');
+
+                // Optimistically update UI (toggle current state)
+                var $status = $tile.find('.device-status');
+                var currentText = $status.text();
+                var isCurrentlyOn;
+
+                // Determine current state based on device type
+                if (isDimmable) {
+                    // For dimmable devices, check brightness percentage
+                    var currentBrightness = parseInt(currentText.replace('%', '')) || 0;
+                    isCurrentlyOn = currentBrightness > 0;
+                } else {
+                    // For non-dimmable devices, check text
+                    isCurrentlyOn = currentText === 'Ein';
+                }
+
+                var newStateClass = isCurrentlyOn ? 'inactive' : 'active';
+
+                // For dimmable devices, also update brightness display and overlay slider
+                if (isDimmable) {
+                    var $overlaySlider = $('.device-color-menu[data-entity-id="' + entityId + '"]').find('.brightness-slider, .color-brightness-slider');
+                    var $overlayValue = $('.device-color-menu[data-entity-id="' + entityId + '"]').find('.brightness-value');
+
+                    if (isCurrentlyOn) {
+                        // Turning off - set to 0%
+                        $status.text('0%');
+                        if ($overlaySlider.length > 0) {
+                            $overlaySlider.val(0);
+                        }
+                        if ($overlayValue.length > 0) {
+                            $overlayValue.text('0%');
+                        }
+                    } else {
+                        // Turning on - set to 50% as default
+                        $status.text('50%');
+                        if ($overlaySlider.length > 0) {
+                            $overlaySlider.val(50);
+                        }
+                        if ($overlayValue.length > 0) {
+                            $overlayValue.text('50%');
+                        }
+                    }
+                } else {
+                    // Non-dimmable devices
+                    var newState = isCurrentlyOn ? 'Aus' : 'Ein';
+                    $status.text(newState);
+                }
+
+                $tile.removeClass('state_active state_inactive').addClass('state_' + newStateClass);
+
+                // Update icon
+                var $icon = $tile.find('.device-icon');
+                var application = $tile.data('application') || '';
+                if ($icon.length > 0 && application) {
+                    var iconName = getBootstrapIcon(application, !isCurrentlyOn);
+                    $icon.attr('class', 'bi bi-' + iconName + ' device-icon');
+                }
+
+                $.ajax({
+                    url: "/toggle-device",
+                    type: 'post',
+                    dataType: 'json',
+                    data: JSON.stringify({entity_id: entityId}),
+                    contentType: 'application/json',
+                    success: function(result) {
+                        if (result.ok) {
+                            // Verify status after a short delay
+                            setTimeout(function() {
+                                updateDeviceStatus(entityId, $tile);
+                            }, 1000);
+                        } else {
+                            // Revert optimistic update on error
+                            $tile.removeClass('state_active state_inactive').addClass('state_' + (isCurrentlyOn ? 'active' : 'inactive'));
+                            $status.text(currentText);
+                            if (isDimmable) {
+                                var $overlaySlider = $('.device-color-menu[data-entity-id="' + entityId + '"]').find('.brightness-slider, .color-brightness-slider');
+                                var $overlayValue = $('.device-color-menu[data-entity-id="' + entityId + '"]').find('.brightness-value');
+                                var oldBrightness = parseInt(currentText.replace('%', '')) || 0;
+                                if ($overlaySlider.length > 0) {
+                                    $overlaySlider.val(oldBrightness);
+                                }
+                                if ($overlayValue.length > 0) {
+                                    $overlayValue.text(currentText);
+                                }
+                            }
+                            alert('Fehler: ' + (result.error || 'Unbekannter Fehler'));
+                        }
+                        $tile.css('opacity', '1').css('pointer-events', 'auto');
+                    },
+                    error: function(xhr) {
+                        // Revert optimistic update on error
+                        $tile.removeClass('state_active state_inactive').addClass('state_' + (isCurrentlyOn ? 'active' : 'inactive'));
+                        $status.text(currentText);
+                        if (isDimmable) {
+                            var $overlaySlider = $('.device-color-menu[data-entity-id="' + entityId + '"]').find('.brightness-slider, .color-brightness-slider');
+                            var $overlayValue = $('.device-color-menu[data-entity-id="' + entityId + '"]').find('.brightness-value');
+                            var oldBrightness = parseInt(currentText.replace('%', '')) || 0;
+                            if ($overlaySlider.length > 0) {
+                                $overlaySlider.val(oldBrightness);
+                            }
+                            if ($overlayValue.length > 0) {
+                                $overlayValue.text(currentText);
+                            }
+                        }
+
+                        var errorMsg = 'Fehler beim Umschalten';
+                        try {
+                            var result = JSON.parse(xhr.responseText);
+                            errorMsg = result.error || errorMsg;
+                        } catch(e) {}
+                        alert(errorMsg);
+                        $tile.css('opacity', '1').css('pointer-events', 'auto');
+                    }
+                });
+            });
+
+            // Real-time updates via Server-Sent Events (SSE)
+            if (typeof EventSource !== 'undefined') {
+                var eventSource = new EventSource('/api/status-updates');
+
+                    eventSource.onopen = function() {
+                        // SSE connection established
+                    };
+                    
+                    eventSource.onerror = function(error) {
+                        console.error('[SSE] Connection error:', error);
+                    };
+                    
+                    eventSource.onmessage = function(event) {
+                        try {
+                            var result = JSON.parse(event.data);
+                            if (result.ok && result.devices) {
+                                // Update all device cards
+                                $('.device-card').each(function() {
+                                    var $card = $(this);
+                                    var entityId = $card.data('entity-id');
+                                    if (entityId && result.devices[entityId]) {
+                                        // Pass device data directly to avoid additional API requests
+                                        var deviceData = result.devices[entityId];
+                                        updateDeviceStatus(entityId, $card, deviceData);
+                                    }
+                                });
+
+                            // Update sensor cards
+                            $('.sensor-card').each(function() {
+                                var $card = $(this);
+                                var entityId = $card.data('entity-id');
+                                if (entityId && result.devices[entityId]) {
+                                    var deviceState = result.devices[entityId].state;
+                                    var sensorValue = 'N/A';
+
+                                    // Get sensor application from data attribute
+                                    var application = $card.data('application');
+
+                                    if (application && deviceState && deviceState.states && deviceState.states[application]) {
+                                        var stateValue = deviceState.states[application];
+                                        if (typeof stateValue === 'object' && stateValue.value !== undefined) {
+                                            sensorValue = stateValue.value;
+                                        } else {
+                                            sensorValue = stateValue;
+                                        }
+                                    }
+
+                                    var $value = $card.find('.sensor-value');
+                                    if ($value.length > 0) {
+                                        $value.text(sensorValue);
+                                    }
+                                }
+                            });
+                        }
+                    } catch (e) {
+                        console.error('Error parsing SSE message:', e);
+                    }
+                };
+
+                eventSource.onerror = function(event) {
+                    console.error('SSE connection error, will reconnect automatically');
+                };
+
+                // Cleanup on page unload
+                $(window).on('beforeunload', function() {
+                    eventSource.close();
+                });
+            } else {
+                // Fallback to polling if SSE not supported (very old browsers)
+                console.warn('EventSource not supported, falling back to polling');
+                setInterval(function() {
+                    $.ajax({
+                        url: "/api/all-device-status",
+                        type: 'get',
+                        dataType: 'json',
+                        success: function(result) {
+                            if (result.ok && result.devices) {
+                                $('.device-card').each(function() {
+                                    var $card = $(this);
+                                    var entityId = $card.data('entity-id');
+                                    if (entityId && result.devices[entityId]) {
+                                        updateDeviceStatus(entityId, $card);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }, 10000); // Poll every 10 seconds as fallback
+            }
+        });
+    </script>
+</head>
+<body>
+<div id="main" class="dashboard-main">
+    <div id="main-head">
+        <div class="header">
+            <div class="header-content">
+                <h3>HomeKit Bridge Dashboard</h3>
+                <button class="menu-toggle" id="menu-toggle" aria-label="Menü öffnen">
+                    <i class="bi bi-list"></i>
+                </button>
             </div>
-            {% for zone, entities in entities.items() %}
-            <div class="room">
-                <h4>{{ zone }}</h4>
-                {% for e in entities %}
-                    {% set state = "active" if 'on' in e.state.states and e.state.states['on'] else "inactive" %}
-                <div class="content-box">
-                    {% if e.service == 'sensor' %}
-                     <div class="stateless-action-tile state_{{ state }}" title="Click to activate scenario" aria-label="Click to activate scenario">
-                        <img src="{{ url_for('static', filename='icons/png/32x32/' + e.application + '.png') }}" class="content-box-icon" alt="Scenario">
-                        <span class="stateless-action-name " title="">{{ e.state.states[e.application]['value'] }}</span>
+        </div>
+        <div class="menu-overlay" id="menu-overlay"></div>
+        <div class="menu-drawer" id="menu-drawer">
+            <div class="menu-header">
+                <h3>Menü</h3>
+                <button class="menu-close" id="menu-close" aria-label="Menü schließen">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div class="menu-items">
+                <a href="/onboarding/devices" class="menu-item">
+                    <i class="bi bi-gear"></i>
+                    <span>Geräte konfigurieren</span>
+                </a>
+                <a href="/config/zones" class="menu-item">
+                    <i class="bi bi-sort-down"></i>
+                    <span>Zonen sortieren</span>
+                </a>
+                <button class="menu-item menu-item-button" id="restart-bridge-menu">
+                    <i class="bi bi-arrow-clockwise"></i>
+                    <span>Bridge neu starten</span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="main-mid">
+        {% if single_zone %}
+        <div style="margin-bottom: 16px; padding: 0 15px;">
+            <a href="/"
+               style="display: inline-flex; align-items: center; gap: 8px; color: #333; text-decoration: none; font-weight: 500;">
+                <i class="bi bi-arrow-left"></i>
+                <span>Zurück zur Übersicht</span>
+            </a>
+        </div>
+        {% endif %}
+        {% for zone, zone_data in entities.items() %}
+        <div class="zonebox">
+            <h4>
+                {% if not single_zone %}
+                <a href="/zone/{{ zone }}"
+                   style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                    <span>{{ zone }}</span>
+                    <i class="bi bi-arrow-right-square" style="font-size: 20px;"></i>
+                </a>
+                {% else %}
+                {{ zone }}
+                {% endif %}
+            </h4>
+
+            {% if zone_data.sensors %}
+            <div class="sensors-grid">
+                {% for sensor in zone_data.sensors %}
+                {% set sensor_value = 'N/A' %}
+                {% set is_available = sensor.get('available', False) %}
+                {% if is_available and sensor.state and sensor.state.states and sensor.application in
+                sensor.state.states %}
+                {% if sensor.state.states[sensor.application] is mapping %}
+                {% set sensor_value = sensor.state.states[sensor.application].get('value', 'N/A') %}
+                {% else %}
+                {% set sensor_value = sensor.state.states[sensor.application] %}
+                {% endif %}
+                {% endif %}
+                <div class="sensor-card {% if not is_available %}unavailable{% endif %}"
+                     data-entity-id="{{ sensor.entity_id }}" data-application="{{ sensor.application }}">
+                    <i class="bi bi-{{ sensor.application | bootstrap_icon(True) }} sensor-icon"></i>
+                    <div class="sensor-info">
+                        <span class="sensor-label">{{ sensor.name | replace(zone, '') }}</span>
+                        <span class="sensor-value">{{ sensor_value }}</span>
                     </div>
-                    {% else %}
-                    <div class="stateless-action-tile state_{{ state }}" title="Click to activate scenario" aria-label="Click to activate scenario">
-                        <img src="{{ url_for('static', filename='icons/png/64x64/' + e.application + '.png') }}" class="content-box-icon" alt="Scenario">
-                        <span class="stateless-action-name " title=""> {{ e.name | replace(zone, '') }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if zone_data.devices %}
+            <div class="devices-grid">
+                {% for device in zone_data.devices %}
+                {% set state = "active" if 'on' in device.state.states and device.state.states['on'] else "inactive" %}
+                {% set is_dimmable = device.get('support', {}).get('brightness', False) %}
+                {% set is_shade = device.get('application') == 'shades' %}
+                {% set supports_color = device.get('application') == 'lights' and device.get('supports_rgb_color',
+                False) %}
+                {% set supports_colortemp = device.get('application') == 'lights' and device.get('supports_colortemp',
+                False) %}
+                {% set has_color_options = supports_color or supports_colortemp %}
+                {% set brightness = 0 %}
+                {% set shade_position = 0 %}
+                {% set hue = 0 %}
+                {% set saturation = 0 %}
+                {% if is_dimmable and device.state.states.get('brightness') %}
+                {% set brightness = device.state.states.brightness.get('value', 0) %}
+                {% endif %}
+                {% if is_shade and device.state.states.get('shadePositionOutside') %}
+                {% set shade_position = device.state.states.shadePositionOutside.get('value', 0) %}
+                {% set state = "active" if shade_position > 0 else "inactive" %}
+                {% endif %}
+                {% if supports_color %}
+                {% if device.get('hue') is not none %}
+                {% set hue = device.hue %}
+                {% elif device.state.states.get('hue') %}
+                {% set hue = device.state.states.hue.get('value', 0) %}
+                {% endif %}
+                {% if device.get('saturation') is not none %}
+                {% set saturation = device.saturation %}
+                {% elif device.state.states.get('saturation') %}
+                {% set saturation = device.state.states.saturation.get('value', 0) %}
+                {% endif %}
+                {% endif %}
+                {% set is_available = device.get('available', False) %}
+                <div class="device-card state_{{ state }} {% if not is_available %}unavailable{% endif %}"
+                     data-entity-id="{{ device.entity_id }}" data-dimmable="{{ 'true' if is_dimmable else 'false' }}"
+                     data-shade="{{ 'true' if is_shade else 'false' }}"
+                     data-color="{{ 'true' if supports_color else 'false' }}"
+                     data-application="{{ device.application }}"
+                     data-available="{{ 'true' if is_available else 'false' }}">
+                    <i class="bi bi-{{ device.application | bootstrap_icon(state == 'active') }} device-icon"></i>
+                    <div class="device-info">
+                        <span class="device-name">{{ device.name | replace(zone, '') }}</span>
+                        {% if is_shade %}
+                        <span class="device-status">{{ shade_position | round(0) | int }}%</span>
+                        {% elif is_dimmable %}
+                        <span class="device-status">{{ brightness | round(0) | int }}%</span>
+                        {% else %}
+                        <span class="device-status">{{ 'Ein' if state == 'active' else 'Aus' }}</span>
+                        {% endif %}
                     </div>
+                    {% if is_dimmable or is_shade or has_color_options %}
+                    <button class="device-color-menu-toggle" data-entity-id="{{ device.entity_id }}"
+                            aria-label="Einstellungen">
+                        <i class="bi bi-gear"></i>
+                    </button>
                     {% endif %}
                 </div>
                 {% endfor %}
             </div>
-            {% endfor %}
+            {% endif %}
         </div>
-    </body>
+        {% endfor %}
+    </div>
+</div>
+{% for zone, zone_data in entities.items() %}
+{% for device in zone_data.devices %}
+{% set is_dimmable = device.get('support', {}).get('brightness', False) %}
+{% set is_shade = device.get('application') == 'shades' %}
+{% set supports_color = device.get('application') == 'lights' and device.get('supports_rgb_color', False) %}
+{% set supports_colortemp = device.get('application') == 'lights' and device.get('supports_colortemp', False) %}
+{% set has_color_options = supports_color or supports_colortemp %}
+{% if is_dimmable or is_shade or has_color_options %}
+{% set colortemp = 0 %}
+{% if has_color_options and supports_colortemp %}
+{% if device.get('colortemp') is not none %}
+{% set colortemp = device.colortemp %}
+{% elif device.state.states.get('colortemp') %}
+{% set colortemp_mired = device.state.states.colortemp.get('value', 0) %}
+{% if colortemp_mired >= 140 and colortemp_mired <= 500 %}
+{% set colortemp = ((500 - colortemp_mired) / 3.6) | round | int %}
+{% else %}
+{% set colortemp = 0 %}
+{% endif %}
+{% endif %}
+{% endif %}
+{% set brightness = 0 %}
+{% set shade_position = 0 %}
+{% if is_dimmable and device.state.states.get('brightness') %}
+{% set brightness = device.state.states.brightness.get('value', 0) %}
+{% endif %}
+{% if is_shade and device.state.states.get('shadePositionOutside') %}
+{% set shade_position = device.state.states.shadePositionOutside.get('value', 0) %}
+{% endif %}
+<div class="device-color-menu-overlay" data-entity-id="{{ device.entity_id }}" style="display: none;"></div>
+<div class="device-color-menu" data-entity-id="{{ device.entity_id }}"
+     style="display: none !important; visibility: hidden !important; opacity: 0 !important;">
+    <div class="color-menu-header">
+        <span>Einstellungen</span>
+        <button class="color-menu-close" data-entity-id="{{ device.entity_id }}" aria-label="Schließen">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+    <div class="color-picker-container">
+        {% if is_shade %}
+        <div class="color-section">
+            <div class="brightness-label">
+                <i class="bi bi-arrows-expand"></i>
+                <span>Höhe</span>
+            </div>
+            <div class="brightness-slider-wrapper">
+                <input type="range" class="shade-slider" min="0" max="100" value="{{ shade_position }}"
+                       data-entity-id="{{ device.entity_id }}">
+                <div class="brightness-gradient"></div>
+            </div>
+        </div>
+        {% elif is_dimmable %}
+        <div class="color-section">
+            <div class="brightness-label">
+                <i class="bi bi-circle-half"></i>
+                <span>Helligkeit</span>
+            </div>
+            <div class="brightness-slider-wrapper">
+                <input type="range" class="brightness-slider" min="0" max="100" value="{{ brightness }}"
+                       data-entity-id="{{ device.entity_id }}">
+                <div class="brightness-gradient"></div>
+            </div>
+        </div>
+        {% endif %}
+        {% if supports_color %}
+        <div class="color-section">
+            <div class="color-wheel-container">
+                <canvas class="color-wheel" data-entity-id="{{ device.entity_id }}"></canvas>
+                <div class="color-wheel-indicator"></div>
+            </div>
+            <div class="brightness-control">
+                <div class="brightness-label">
+                    <i class="bi bi-circle-half"></i>
+                    <span>Helligkeit</span>
+                </div>
+                <div class="brightness-slider-wrapper">
+                    <input type="range" class="color-brightness-slider" min="0" max="100"
+                           value="{{ brightness if brightness > 0 else 50 }}"
+                           data-entity-id="{{ device.entity_id }}">
+                    <div class="brightness-gradient"></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if supports_colortemp %}
+        <div class="color-section colortemp-section">
+            <div class="colortemp-label">
+                <i class="bi bi-thermometer-half"></i>
+                <span>Farbtemperatur</span>
+            </div>
+            <div class="colortemp-control">
+                <div class="colortemp-labels">
+                    <span>Warm</span>
+                    <span>Kalt</span>
+                </div>
+                <div class="colortemp-slider-wrapper">
+                    <input type="range" class="colortemp-slider" min="0" max="100" value="{{ colortemp }}"
+                           data-entity-id="{{ device.entity_id }}">
+                    <div class="colortemp-gradient"></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+{% endfor %}
+</body>
 </html>

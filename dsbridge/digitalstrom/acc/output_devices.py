@@ -1,6 +1,6 @@
+from .. import device_collector
 from ..acc import get_device_application
 from ..const import DEVICES_CHARS, HUE_DEVICES
-from .. import device_collector
 
 
 def get_device_function_attributes(device_id):
@@ -66,10 +66,6 @@ class OutputDevices:
             if 'outputs' in device_attributes:
                 functions = {str(v['id']): v['attributes'] for v in device_attributes['outputs']}
 
-                # if _technical_name in DEVICE_SUPPORT:
-                #     for _attr in DEVICE_SUPPORT[_technical_name]['support']:
-                #         device_support[_attr] = True
-                # else:
                 if device_application == "lights":
                     if 'brightness' in functions:
                         device_support['brightness'] = functions['brightness']['mode'] == 'gradual'
@@ -89,7 +85,16 @@ class OutputDevices:
                             device_chars = DEVICES_CHARS[device_application][chars['attributes']['mode']]
                         device_mode = chars['attributes']['mode']
 
-                zone = get_zone(device['attributes']['zone'])['name']
+                zone_obj = get_zone(device['attributes']['zone'])
+                if zone_obj is None:
+                    # Skip devices without valid zone
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning("Zone %s not found for device %s, skipping", device['attributes']['zone'],
+                                   device['id'])
+                    continue
+
+                zone = zone_obj['name']
                 d = {
                     "entity_id": device['id'] + "." + device_application,
                     "dsuid": device['id'],

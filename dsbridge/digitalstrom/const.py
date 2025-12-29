@@ -18,6 +18,3 @@ DEVICES_CHARS = {
     }
 }
 
-ENOCEAN_DEVICES = {
-    "Id Rf EnOcean Motion input": ["Motion", "Brightness"]
-}

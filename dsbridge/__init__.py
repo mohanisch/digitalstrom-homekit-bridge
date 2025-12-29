@@ -1,7 +1,5 @@
-"""
-dsbridge
-"""
 import logging
+
 from .config import read_config_file as c
 from .helper import remove_control_characters, threaded
 

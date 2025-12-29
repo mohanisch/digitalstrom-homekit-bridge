@@ -4,7 +4,6 @@ Homekit utils
 import io
 import logging
 import secrets
-
 from collections.abc import Callable, Hashable
 from typing import TypeVar
 

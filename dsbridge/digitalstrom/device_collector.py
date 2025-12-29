@@ -1,12 +1,12 @@
 import logging
 import time
+
 from .const import SMART_HOME_API
 from .helper import generate_dsuid
 from .request_handler import RequestHandler
 from ..config import args, read_config_file as c
 
 logger = logging.getLogger(__name__)
-
 
 # Request handler cache to avoid recreating sessions
 _request_handler_cache = None
@@ -31,32 +31,32 @@ def collect_data(uri: str, api: str = SMART_HOME_API, params=None, key="data"):
         requests.exceptions.RequestException: If API request fails
     """
     global _request_handler_cache, _request_handler_token
-    
+
     try:
         config = c()
         if 'token' not in config or not config['token']:
             raise ValueError("No token found in configuration")
-        
+
         # Reuse request handler if token hasn't changed (connection pooling)
-        if (_request_handler_cache is None or 
-            _request_handler_token != config['token']):
+        if (_request_handler_cache is None or
+                _request_handler_token != config['token']):
             _request_handler_cache = RequestHandler(
                 "https://" + args.dss_hostname + ":" + args.dss_http_port,
                 config['token']
             )
             _request_handler_token = config['token']
-        
+
         request_handler = _request_handler_cache
-        
+
         if params is None:
             params = {}
 
         _response = request_handler.get(api + uri, params=params)
-        
+
         if key not in _response:
             logger.error("Key '%s' not found in API response for %s", key, uri)
             raise KeyError(f"Key '{key}' not found in response")
-            
+
         return _response[key]
     except Exception as e:
         logger.error("Error collecting data from %s: %s", uri, e, exc_info=True)
@@ -94,11 +94,11 @@ class DssStateCollector:
         """Gather device statuses from digitalStrom API with error handling."""
         try:
             apartment = collect_data("/status", params={"include": "dsDevices,zones,userDefinedStates"})
-            
+
             if 'included' not in apartment:
                 logger.error("Unexpected apartment status structure: missing 'included' key")
                 return self._device_states
-                
+
             apartment_status = apartment['included']
             zones_status = apartment_status.get('zones', [])
             last_change = int(time.time())
@@ -129,7 +129,7 @@ class DssStateCollector:
 
             # Optimize zone processing with dictionary lookup
             zones_dict = {str(v['id']): v for v in zones_status}
-            
+
             for device_id, device in zones_dict.items():
                 try:
                     if 'attributes' in device and 'measurements' in device['attributes']:
@@ -163,7 +163,8 @@ class DssCollector:
         self._measurements = {}
         self.collected_zone = {}
 
-        # TODO: imports have to be restructured
+        # Note: Imports are done locally to avoid circular dependencies.
+        # This could be refactored in the future for better code organization.
         self._devices = {}
         self._function_blocks = {}
         self._user_defined_states = {}
@@ -194,17 +195,17 @@ class DssCollector:
         try:
             self.apartment_data = collect_data("/", params={
                 "include": "dsDevices,functionBlocks,userDefinedStates,submodules,zones"})
-            
+
             if 'included' not in self.apartment_data:
                 logger.error("Unexpected apartment data structure: missing 'included' key")
                 return
-                
+
             included = self.apartment_data['included']
             self._devices = included.get('dsDevices', [])
             self._function_blocks = included.get('functionBlocks', [])
             self._user_defined_states = included.get('userDefinedStates', [])
             self._submodules = included.get('submodules', [])
-            
+
             zones = included.get('zones', [])
             self._transform_zones(zones)
         except Exception as e:
@@ -280,21 +281,21 @@ class DssCollector:
     def _transform_zones(self, data):
         """Transform zone data with optimized dictionary lookups."""
         zones = []
-        
+
         # Pre-build lookup dictionaries for O(1) access
         function_blocks_dict = {v['id']: v['attributes'] for v in self._function_blocks}
         submodules_dict = {v['id']: v['attributes']['application'] for v in self._submodules}
 
         for zone in data:
             zone_id = zone['id']
-            
+
             # Skip special zone
             if zone_id == '65534' or zone_id == 65534:
                 continue
 
             _applications = {}
             zone_attrs = zone.get('attributes', {})
-            
+
             # Initialize applications
             for application in zone_attrs.get('applications', []):
                 _applications[application] = []
@@ -314,5 +315,5 @@ class DssCollector:
                     "name": zone_attrs["name"],
                     "devices": _applications
                 })
-        
+
         self._zones = zones

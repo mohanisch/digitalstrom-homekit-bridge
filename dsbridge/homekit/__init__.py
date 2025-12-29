@@ -8,10 +8,10 @@ import threading
 
 from dsbridge import config
 from dsbridge.const import STATUS_READY
+from dsbridge.digitalstrom import state_collector
 from dsbridge.homekit.accessories import DsAccessoryDriver, DsBridge, get_accessory
 from dsbridge.homekit.aid_manager import AccessoryAidStorage
 from dsbridge.homekit.event_handler import EventDecider
-from dsbridge.digitalstrom import state_collector
 
 logger = logging.getLogger(__name__)
 
@@ -22,15 +22,28 @@ _homekit_thread = None
 def start_homekit():
     """Start homekit in a separate thread."""
     global _homekit_thread
-    
+
     def add_devices():
         try:
             file = config.read_config_file()
             if 'entities' not in file:
                 logger.warning("No entities found in config")
                 return
-                
+
+            # Check device availability before adding to HomeKit
+            available_states = state_collector.gather_devices_status()
+
             for dsdevice in file['entities']:
+                # Skip devices that are not available in digitalSTROM
+                entity_id = dsdevice.get('entity_id')
+                if entity_id not in available_states:
+                    logger.warning(
+                        "Skipping unavailable device %s (%s) - not found in digitalSTROM",
+                        dsdevice.get('name', 'unknown'),
+                        entity_id
+                    )
+                    continue
+
                 try:
                     homekit.add_bridge_accessory(dsdevice)
                 except Exception as e:
@@ -76,6 +89,7 @@ class HomeKit:
     """
     Homekit class
     """
+
     def __init__(
             self,
             name,

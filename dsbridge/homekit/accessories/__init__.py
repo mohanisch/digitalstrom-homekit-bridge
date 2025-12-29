@@ -11,7 +11,7 @@ from pyhap.const import CATEGORY_OTHER
 from pyhap.util import callback as pyhap_callback
 
 from dsbridge.homekit.util import Registry, async_suppress_setup_message, async_show_setup_message
-from ...const import BRIDGE_SERIAL_NUMBER, BRIDGE_NAME, MANUFACTURER
+from ...const import BRIDGE_SERIAL_NUMBER, BRIDGE_NAME
 
 ACC_TYPES = Registry()
 
@@ -70,16 +70,17 @@ class DsAccessory(Accessory):
     """
     A representation of a HAP accessory with race condition protection.
     """
+
     def __init__(
-        self,
-        driver: DsAccessoryDriver,
-        name: str,
-        aid: int,
-        entity_id: str,
-        config: dict,
-        *args: Any,
-        category: str = CATEGORY_OTHER,
-        **kwargs: Any,
+            self,
+            driver: DsAccessoryDriver,
+            name: str,
+            aid: int,
+            entity_id: str,
+            config: dict,
+            *args: Any,
+            category: str = CATEGORY_OTHER,
+            **kwargs: Any,
     ) -> None:
         super().__init__(driver=driver, display_name=name, aid=aid)
         self.category = category
@@ -98,12 +99,12 @@ class DsAccessory(Accessory):
             self.chars = config['chars']
         if 'support' in config:
             self.support = config['support']
-        
+
         # Race condition protection: ignore external updates after user actions
         self._last_user_action = 0  # Timestamp of last user action via HomeKit
         self._ignore_updates_until = 0  # Ignore state updates until this timestamp
         self._ignore_duration = 3  # Seconds to ignore updates after user action
-    
+
     def mark_user_action(self, duration: int = None):
         """
         Mark that user just changed the state via HomeKit.
@@ -115,7 +116,7 @@ class DsAccessory(Accessory):
         current_time = int(time.time())
         self._last_user_action = current_time
         self._ignore_updates_until = current_time + (duration or self._ignore_duration)
-    
+
     def should_ignore_update(self) -> bool:
         """
         Check if external state updates should be ignored.
@@ -242,7 +243,7 @@ class DsAccessoryDriver(AccessoryDriver):
 
     @pyhap_callback
     def pair(
-        self, client_username_bytes: bytes, client_public: bytes, client_permissions: bytes
+            self, client_username_bytes: bytes, client_public: bytes, client_permissions: bytes
     ) -> bool:
         """Override super function to dismiss setup message if paired."""
         success = super().pair(client_username_bytes, client_public, client_permissions)
@@ -273,7 +274,6 @@ class DsBridge(Bridge):
         super().__init__(driver, name)
         self.set_info_service(
             model=BRIDGE_NAME,
-            manufacturer=MANUFACTURER,
             firmware_revision=BRIDGE_SERIAL_NUMBER,
             serial_number=BRIDGE_SERIAL_NUMBER,
         )

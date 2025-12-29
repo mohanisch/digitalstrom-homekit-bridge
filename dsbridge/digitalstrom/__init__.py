@@ -1,11 +1,9 @@
-from .eventpatcher import EventPatcher
-from .const import SYSTEM_API
-
-from ..config import read_config_file as config_file
-
 # Import classes
 from dsbridge.digitalstrom.device_collector import DssCollector
 from dsbridge.digitalstrom.device_collector import DssStateCollector
+from .const import SYSTEM_API
+from .eventpatcher import EventPatcher
+from ..config import read_config_file as config_file
 
 # Initialize collectors - they will be properly initialized when token is available
 # This allows imports to work even before configuration is complete

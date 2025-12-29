@@ -1,7 +1,7 @@
 import random
+from collections.abc import Generator
 
 from fnvhash import fnv1a_32
-from collections.abc import Generator
 
 INVALID_AIDS = (0, 1)
 

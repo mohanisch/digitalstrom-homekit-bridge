@@ -2,6 +2,7 @@ import argparse
 import os
 
 import yaml
+
 from ..const import RESTART_EXIT_CODE
 
 ENV_PERSIST_FILE_PATH = os.environ.get('PERSIST_FILE_PATH')
@@ -12,9 +13,10 @@ DEFAULT_DATA_PATH = ENV_PERSIST_FILE_PATH if ENV_PERSIST_FILE_PATH else '/tmp'
 DEFAULT_HOMEKIT_ADDRESS = ENV_HOMEKIT_ADDRESS if ENV_HOMEKIT_ADDRESS else None
 DEFAULT_HOMEKIT_PORT = ENV_HOMEKIT_PORT if ENV_HOMEKIT_PORT else 51826
 
+
 def get_arguments() -> argparse.Namespace:
     import sys
-    
+
     # Handle Docker case where arguments might be passed as single strings with spaces
     # e.g., "--config-path /config" instead of "--config-path", "/config"
     processed_args = []
@@ -25,18 +27,19 @@ def get_arguments() -> argparse.Namespace:
             processed_args.extend(parts)
         else:
             processed_args.append(arg)
-    
+
     # Temporarily replace sys.argv for argparse
     original_argv = sys.argv
     sys.argv = [sys.argv[0]] + processed_args
-    
+
     try:
         parser = argparse.ArgumentParser(
             description="Homekit bridge for digitalStrom",
             epilog=f"If restart is requested, exits with code {RESTART_EXIT_CODE}",
         )
         parser.add_argument(
-            "--dss-hostname", help="Hostname or ip-address of digitalStrom server", default=os.environ.get('DSS_HOSTNAME')
+            "--dss-hostname", help="Hostname or ip-address of digitalStrom server",
+            default=os.environ.get('DSS_HOSTNAME')
         )
         parser.add_argument(
             "--dss-http-port", help="Port to reach digitalStrom http server, default 8080", default="8080"
@@ -48,7 +51,8 @@ def get_arguments() -> argparse.Namespace:
             "--homekit-bridge-name", help="Name how the bridge should be appear in Home", default="dS Homebridge"
         )
         parser.add_argument(
-            "--homekit-address", help="IP address of host on which the bridge is running", default=DEFAULT_HOMEKIT_ADDRESS
+            "--homekit-address", help="IP address of host on which the bridge is running",
+            default=DEFAULT_HOMEKIT_ADDRESS
         )
         parser.add_argument(
             "--homekit-port", help="Port number homekit is working on", default=DEFAULT_HOMEKIT_PORT
@@ -77,10 +81,9 @@ def get_arguments() -> argparse.Namespace:
         sys.argv = original_argv
 
 
-# Config caching to avoid frequent file reads
 _config_cache = None
 _config_cache_time = 0
-_config_cache_ttl = 2  # Cache for 2 seconds
+_config_cache_ttl = 2
 _config_file_path = None
 
 
@@ -95,21 +98,21 @@ def read_config_file(force_reload=False):
         Config dictionary
     """
     global _config_cache, _config_cache_time, _config_file_path
-    
+
     import time
-    
+
     # Initialize file path on first call
     if _config_file_path is None:
         _config_file_path = args.config_path + "/config.yml"
-    
+
     current_time = time.time()
-    
+
     # Return cached config if still valid and not forcing reload
-    if (not force_reload and 
-        _config_cache is not None and 
-        current_time - _config_cache_time < _config_cache_ttl):
+    if (not force_reload and
+            _config_cache is not None and
+            current_time - _config_cache_time < _config_cache_ttl):
         return _config_cache
-    
+
     import os.path
     file_exists = os.path.isfile(_config_file_path)
 
@@ -141,7 +144,7 @@ def read_config_file(force_reload=False):
     # Update cache
     _config_cache = _file
     _config_cache_time = current_time
-    
+
     return _file
 
 
@@ -153,4 +156,3 @@ def invalidate_config_cache():
 
 
 args = get_arguments()
-

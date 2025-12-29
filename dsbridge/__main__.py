@@ -2,14 +2,12 @@ import logging
 import signal
 import sys
 import threading
-import time
 
-from .dashboard import run_server
 from .const import REQUIRED_PYTHON_VER
+from .dashboard import run_server
 
 logger = logging.getLogger(__name__)
 
-# Thread references for graceful shutdown
 _websocket_thread = None
 _homekit_thread = None
 _shutdown_event = threading.Event()
@@ -39,7 +37,7 @@ def check_threads() -> None:
 def start_websocket():
     """Start websocket in a separate thread."""
     from .config import read_config_file
-    
+
     # Wait for token to be available
     while not _shutdown_event.is_set():
         try:
@@ -50,7 +48,7 @@ def start_websocket():
                 break
         except Exception as e:
             logger.error("Error starting websocket: %s", e, exc_info=True)
-        
+
         # Wait 2 seconds before checking again (or until shutdown event)
         if _shutdown_event.wait(timeout=2):
             break
@@ -59,7 +57,7 @@ def start_websocket():
 def start_homekit():
     """Start homekit in a separate thread."""
     from .config import read_config_file
-    
+
     # Wait for entities to be configured
     while not _shutdown_event.is_set():
         try:
@@ -70,7 +68,7 @@ def start_homekit():
                 break
         except Exception as e:
             logger.error("Error starting homekit: %s", e, exc_info=True)
-        
+
         # Wait 2 seconds before checking again (or until shutdown event)
         if _shutdown_event.wait(timeout=2):
             break
@@ -80,26 +78,26 @@ def signal_handler(signum, frame):
     """Handle shutdown signals gracefully."""
     logger.info("Received signal %d, shutting down...", signum)
     _shutdown_event.set()
-    
+
     # Stop homekit gracefully
     try:
         from .homekit import stop_homekit
         stop_homekit()
     except Exception as e:
         logger.error("Error stopping homekit: %s", e)
-    
+
     sys.exit(0)
 
 
 def main():
     global _websocket_thread, _homekit_thread
-    
+
     validate_python()
-    
+
     # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    
+
     # Start websocket thread
     _websocket_thread = threading.Thread(
         target=start_websocket,
@@ -107,7 +105,7 @@ def main():
         name="websocket"
     )
     _websocket_thread.start()
-    
+
     # Start homekit thread
     _homekit_thread = threading.Thread(
         target=start_homekit,

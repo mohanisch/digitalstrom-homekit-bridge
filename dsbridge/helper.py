@@ -1,10 +1,11 @@
-import threading
-import tempfile
 import errno
+import os
+import tempfile
+import threading
 import time
 import unicodedata
+
 import yaml
-import os
 
 
 def read_config(path):
@@ -39,6 +40,7 @@ def threaded(fn):
     Decorator to run a function in a separate thread.
     Returns None to avoid JSON serialization issues with Thread objects.
     """
+
     def wrapper(*args, **kwargs):
         thread = threading.Thread(target=fn, args=args, kwargs=kwargs, daemon=True)
         thread.start()
@@ -72,4 +74,3 @@ def wait_until(somepredicate, timeout=600, period=0.25, *args, **kwargs):
             return True
         time.sleep(period)
     return False
-

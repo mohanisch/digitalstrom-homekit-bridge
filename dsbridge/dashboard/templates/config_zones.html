@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="de">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+        <title>HomeKit Bridge - Zonen sortieren</title>
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+        <style>
+            .zone-sort-header {
+                margin-bottom: 30px;
+            }
+            
+            .zone-sort-header h1 {
+                margin: 0 0 10px 0;
+                font-size: 24px;
+                color: #333;
+            }
+            
+            .zone-sort-header p {
+                margin: 0;
+                color: #666;
+                font-size: 14px;
+            }
+            
+            .zone-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            
+            .zone-item {
+                background: white;
+                border: 2px solid #fff;
+                border-radius: 8px;
+                padding: 15px 20px;
+                margin-bottom: 10px;
+                cursor: move;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                transition: all 0.2s ease;
+                user-select: none;
+            }
+            
+            .zone-item:hover {
+                border-color: ##d0880b;
+                box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
+            }
+            
+            .zone-item.dragging {
+                opacity: 0.5;
+                border-color: #4CAF50;
+            }
+            
+            .zone-item .zone-name {
+                font-size: 18px;
+                font-weight: 500;
+                color: #333;
+                flex: 1;
+            }
+            
+            .zone-item .zone-handle {
+                color: #999;
+                font-size: 20px;
+                margin-right: 15px;
+                cursor: grab;
+            }
+            
+            .zone-item .zone-handle:active {
+                cursor: grabbing;
+            }
+            
+            .zone-item .zone-actions {
+                display: flex;
+                gap: 10px;
+            }
+            
+            .zone-btn {
+                background: #f5f5f5;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 5px 10px;
+                cursor: pointer;
+                font-size: 14px;
+                color: #666;
+                transition: all 0.2s ease;
+            }
+            
+            .zone-btn:hover {
+                background: #e0e0e0;
+                color: #333;
+            }
+            
+            .zone-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            
+            
+            @media (max-width: 768px) {
+                .zone-sort-container {
+                    padding: 15px;
+                }
+                
+                .zone-sort-header h1 {
+                    font-size: 24px;
+                }
+                
+                .zone-item {
+                    padding: 12px 15px;
+                }
+                
+                .zone-item .zone-name {
+                    font-size: 16px;
+                }
+                
+                .zone-item .zone-handle {
+                    font-size: 18px;
+                    margin-right: 10px;
+                }
+                
+                .zone-btn {
+                    padding: 4px 8px;
+                    font-size: 12px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="main">
+            <div id="main-head">
+                <div class="header">
+                    <div class="header-content">
+                        <a href="/" class="header-back-button" title="Zurück zum Dashboard">
+                            <i class="bi bi-arrow-left"></i>
+                        </a>
+                        <h3>Zonen sortieren</h3>
+                    </div>
+                </div>
+            </div>
+            <div id="main-mid">
+            <div class="zone-sort-header">
+                <p class="beschreibung">Ziehen Sie die Zonen per Drag & Drop oder verwenden Sie die Pfeil-Buttons, um die Reihenfolge zu ändern.</p>
+            </div>
+            
+            <ul class="zone-list" id="zone-list">
+                {% for zone in zones %}
+                <li class="zone-item" data-zone="{{ zone }}">
+                    <i class="bi bi-grip-vertical zone-handle"></i>
+                    <span class="zone-name">{{ zone }}</span>
+                    <div class="zone-actions">
+                        <button class="zone-btn up" onclick="moveZone('{{ zone }}', 'up')" title="Nach oben">
+                            <i class="bi bi-arrow-up"></i>
+                        </button>
+                        <button class="zone-btn down" onclick="moveZone('{{ zone }}', 'down')" title="Nach unten">
+                            <i class="bi bi-arrow-down"></i>
+                        </button>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            </div>
+            <div id="main-bottom">
+                <input type="button" class="button-green forms" id="save-btn" onclick="saveZoneOrder()" value="Reihenfolge speichern">
+            </div>
+        </div>
+        
+        <script src="{{ url_for('static', filename='jquery-3.4.1.min.js') }}"></script>
+        <script>
+            $(document).ready(function() {
+                // Enable drag and drop
+                var draggedElement = null;
+                
+                $('.zone-item').on('mousedown', function(e) {
+                    if ($(e.target).hasClass('zone-handle') || $(e.target).closest('.zone-handle').length) {
+                        draggedElement = this;
+                        $(this).addClass('dragging');
+                        e.preventDefault();
+                    }
+                });
+                
+                $(document).on('mousemove', function(e) {
+                    if (draggedElement) {
+                        var afterElement = getDragAfterElement(e.clientY);
+                        if (afterElement == null) {
+                            $('#zone-list').append(draggedElement);
+                        } else {
+                            $(afterElement).before(draggedElement);
+                        }
+                    }
+                });
+                
+                $(document).on('mouseup', function() {
+                    if (draggedElement) {
+                        $(draggedElement).removeClass('dragging');
+                        draggedElement = null;
+                        updateButtonStates();
+                    }
+                });
+                
+                function getDragAfterElement(y) {
+                    var draggableElements = [...$('.zone-item').not('.dragging')];
+                    
+                    return draggableElements.reduce(function(closest, child) {
+                        var box = child.getBoundingClientRect();
+                        var offset = y - box.top - box.height / 2;
+                        
+                        if (offset < 0 && offset > closest.offset) {
+                            return { offset: offset, element: child };
+                        } else {
+                            return closest;
+                        }
+                    }, { offset: Number.NEGATIVE_INFINITY }).element;
+                }
+                
+                // Touch support for mobile
+                var touchStartY = null;
+                var touchElement = null;
+                
+                $('.zone-item').on('touchstart', function(e) {
+                    if ($(e.target).hasClass('zone-handle') || $(e.target).closest('.zone-handle').length) {
+                        touchElement = this;
+                        touchStartY = e.touches[0].clientY;
+                        $(this).addClass('dragging');
+                        e.preventDefault();
+                    }
+                });
+                
+                $(document).on('touchmove', function(e) {
+                    if (touchElement && touchStartY !== null) {
+                        var touchY = e.touches[0].clientY;
+                        var afterElement = getDragAfterElement(touchY);
+                        if (afterElement == null) {
+                            $('#zone-list').append(touchElement);
+                        } else {
+                            $(afterElement).before(touchElement);
+                        }
+                    }
+                });
+                
+                $(document).on('touchend', function() {
+                    if (touchElement) {
+                        $(touchElement).removeClass('dragging');
+                        touchElement = null;
+                        touchStartY = null;
+                        updateButtonStates();
+                    }
+                });
+                
+                updateButtonStates();
+            });
+            
+            function moveZone(zoneName, direction) {
+                var $item = $('.zone-item[data-zone="' + zoneName + '"]');
+                if (direction === 'up') {
+                    var $prev = $item.prev();
+                    if ($prev.length) {
+                        $prev.before($item);
+                    }
+                } else if (direction === 'down') {
+                    var $next = $item.next();
+                    if ($next.length) {
+                        $next.after($item);
+                    }
+                }
+                updateButtonStates();
+            }
+            
+            function updateButtonStates() {
+                $('.zone-item').each(function(index) {
+                    var $item = $(this);
+                    var $upBtn = $item.find('.zone-btn.up');
+                    var $downBtn = $item.find('.zone-btn.down');
+                    
+                    if (index === 0) {
+                        $upBtn.prop('disabled', true);
+                    } else {
+                        $upBtn.prop('disabled', false);
+                    }
+                    
+                    if (index === $('.zone-item').length - 1) {
+                        $downBtn.prop('disabled', true);
+                    } else {
+                        $downBtn.prop('disabled', false);
+                    }
+                });
+            }
+            
+            function saveZoneOrder() {
+                var zoneOrder = [];
+                $('.zone-item').each(function() {
+                    zoneOrder.push($(this).data('zone'));
+                });
+                
+                var $btn = $('#save-btn');
+                $btn.prop('disabled', true).text('Wird gespeichert...');
+                
+                $.ajax({
+                    url: "/save-zone-order",
+                    type: 'post',
+                    dataType: 'json',
+                    data: JSON.stringify({
+                        zone_order: zoneOrder
+                    }),
+                    contentType: 'application/json',
+                    success: function(result) {
+                        if (result.ok) {
+                            alert('Reihenfolge erfolgreich gespeichert!');
+                            window.location.href = '/';
+                        } else {
+                            alert('Fehler: ' + (result.error || 'Unbekannter Fehler'));
+                            $btn.prop('disabled', false).text('Reihenfolge speichern');
+                        }
+                    },
+                    error: function(xhr) {
+                        var errorMsg = 'Fehler beim Speichern';
+                        try {
+                            var result = JSON.parse(xhr.responseText);
+                            errorMsg = result.error || errorMsg;
+                        } catch(e) {}
+                        alert(errorMsg);
+                        $btn.prop('disabled', false).text('Reihenfolge speichern');
+                    }
+                });
+            }
+        </script>
+    </body>
+</html>

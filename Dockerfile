@@ -1,47 +1,47 @@
-# Multi-stage build for smaller image and faster builds on Raspberry Pi
 FROM python:3.11-slim-bookworm AS builder
 
-# Install build dependencies only
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
       gcc \
       libffi-dev \
       libc6-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and install build tools
 RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
 
-# Copy requirements first for better layer caching
 COPY requirements.txt /tmp/requirements.txt
 WORKDIR /tmp
 
-# Install Python dependencies (this layer will be cached if requirements.txt doesn't change)
-RUN pip3 install --no-cache-dir --user -r requirements.txt
+RUN pip3 install --no-cache-dir --user \
+    --compile \
+    -r requirements.txt
 
-# Copy application code
-COPY . /tmp/app
+COPY setup.py MANIFEST.in README.md /tmp/app/
+COPY dsbridge/ /tmp/app/dsbridge/
 WORKDIR /tmp/app
 
-# Install application
 RUN pip3 install --no-cache-dir --user .
 
-# Final stage - minimal runtime image
 FROM python:3.11-slim-bookworm
 
-# Install only runtime dependencies (no build tools)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
       libavahi-compat-libdnssd1 \
       avahi-utils \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && useradd -M user --uid 1100 \
+    && mkdir /app
 
-# Copy Python packages from builder
-COPY --from=builder /root/.local /root/.local
+COPY --from=builder /root/.local /home/user/.local
 
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
+USER user
+ENV PATH=/app/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /data
 
 EXPOSE 8081
 
-ENTRYPOINT ["/root/.local/bin/dsbridge"]
+ENTRYPOINT ["/home/user/.local/bin/dsbridge", "--config-path", "/data/config.yml"]

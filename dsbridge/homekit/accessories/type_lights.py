@@ -2,8 +2,8 @@ import logging
 import time
 
 from pyhap.const import CATEGORY_LIGHTBULB
-from dsbridge.helper import threaded
 
+from dsbridge.helper import threaded
 from . import ACC_TYPES, DsAccessory
 
 logger = logging.getLogger(__name__)
@@ -115,7 +115,7 @@ class Light(DsAccessory):
     @threaded
     def _set_chars(self, char_values):
         logger.debug("Light _set_chars: %s", char_values)
-        
+
         # Mark that user just changed the state - ignore external updates for a short time
         self.mark_user_action()
 
@@ -176,35 +176,35 @@ class Light(DsAccessory):
         """Handle accessory driver started event - update state from digitalStrom."""
         try:
             current_time = int(time.time())
-            
+
             # Ignore updates if user just changed the state (prevents race condition)
             if self.should_ignore_update():
-                logger.debug("Ignoring state update for %s - user action was %d seconds ago", 
-                           self.entity_id, current_time - self._last_user_action)
+                logger.debug("Ignoring state update for %s - user action was %d seconds ago",
+                             self.entity_id, current_time - self._last_user_action)
                 return
-            
+
             device_services = state_collector.get_device_state(self.entity_id)
-            
+
             # Check if state was recently updated (within last 5 seconds for faster response)
             # This prevents unnecessary updates but still catches WebSocket events
             recently_changed = current_time - 5 < device_services.get('last_change', 0)
-            
+
             # Early exit if nothing changed recently and values match - saves CPU on Pi
             if not recently_changed:
                 # Quick check if brightness matches current value
                 brightness_state = device_services.get('states', {}).get(ATTR_BRIGHTNESS)
                 if brightness_state:
                     current_brightness = round(brightness_state.get('value', 0))
-                    if (self.brightness == current_brightness and 
-                        self.accessory_state == bool(current_brightness)):
+                    if (self.brightness == current_brightness and
+                            self.accessory_state == bool(current_brightness)):
                         return  # No changes, skip processing
-            
+
             for char, values in device_services['states'].items():
                 if char == ATTR_BRIGHTNESS:
                     # Get raw value from digitalStrom
                     raw_value = values.get('value', 0)
                     _value = round(raw_value)
-                    
+
                     # Update state if changed
                     new_state = bool(_value)
                     if self.accessory_state != new_state:
@@ -223,13 +223,13 @@ class Light(DsAccessory):
                         if self.brightness_supported:
                             # Ensure brightness is in valid range (0-100)
                             brightness_to_set = max(0, min(100, int(_value)))
-                            
+
                             # Set value and notify
                             self.char_brightness.set_value(brightness_to_set)
                             try:
                                 self.char_brightness.notify()
-                                logger.debug("Updated light %s brightness from %s to %s", 
-                                           self.entity_id, old_brightness, brightness_to_set)
+                                logger.debug("Updated light %s brightness from %s to %s",
+                                             self.entity_id, old_brightness, brightness_to_set)
                             except Exception as notify_error:
                                 logger.error("Error notifying brightness change: %s", notify_error, exc_info=True)
                         else:
@@ -255,16 +255,6 @@ class Light(DsAccessory):
             logger.debug("Device state not found for %s, skipping update", self.entity_id)
         except Exception as e:
             logger.error("Error updating light state for %s: %s", self.entity_id, e, exc_info=True)
-            #     print("char:", char, values)
-            #     if self.support['hue']:
-            #         self.hue = _value
-            #         self.char_hue.set_value(self.hue)
-            #     else:
-            #         if self.brightness > 0:
-            #             self.xy = self.get_xy(self.char_hue.value, self.char_saturation.value, self.brightness)
-            #             self.
-            #             _attributes.update({'x': self.xy[0]})
-            #             _attributes.update({'y': self.xy[1]})
 
     def async_update_state(self, new_state):
         """Update light after state change."""
@@ -278,10 +268,6 @@ class Light(DsAccessory):
         self.char_on.set_value(state)
         self.char_on.notify()
         self.accessory_state = state
-
-        # color_mode = attributes.get(ATTR_COLOR_MODE)
-        # color_mode_changed = self._previous_color_mode != color_mode
-        # self._previous_color_mode = color_mode
 
         if (
                 self.brightness_supported

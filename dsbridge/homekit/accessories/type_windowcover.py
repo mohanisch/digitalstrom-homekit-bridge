@@ -1,13 +1,16 @@
 """Class to hold all cover accessories."""
 import logging
 import time
+
 from pyhap.const import CATEGORY_WINDOW_COVERING
+
+from dsbridge.helper import threaded
 from dsbridge.homekit import event_decider
-from dsbridge.homekit.const import CHAR_HOLD_POSITION, CHAR_TARGET_HORIZONTAL_TILT_ANGLE, CHAR_CURRENT_HORIZONTAL_TILT_ANGLE, \
-    CHAR_CURRENT_POSITION, CHAR_TARGET_POSITION, CHAR_POSITION_STATE, ATTR_SHADE_POSITION_OUTSIDE
 from dsbridge.homekit import state_collector
 from dsbridge.homekit.accessories import ACC_TYPES, DsAccessory
-from dsbridge.helper import threaded
+from dsbridge.homekit.const import CHAR_HOLD_POSITION, CHAR_TARGET_HORIZONTAL_TILT_ANGLE, \
+    CHAR_CURRENT_HORIZONTAL_TILT_ANGLE, \
+    CHAR_CURRENT_POSITION, CHAR_TARGET_POSITION, CHAR_POSITION_STATE, ATTR_SHADE_POSITION_OUTSIDE
 
 
 @ACC_TYPES.register("WindowCovering")
@@ -71,25 +74,25 @@ class WindowsCovering(DsAccessory):
         """Move cover to value if call came from HomeKit."""
         try:
             logging.info("%s: Setting position to %d", self.entity_id, value)
-            
+
             # Mark that user just changed the state - ignore external updates for a short time
             self.mark_user_action()
-            
+
             # Update local state immediately
             self.target_position = value
             self.position_state = 1  # Moving
-            
+
             # Set the characteristic values
             self.char_target_position.set_value(value)
             self.char_position_state.set_value(1)  # Moving
-            
+
             # Notify clients immediately
             try:
                 self.char_target_position.notify()
                 self.char_position_state.notify()
             except Exception as notify_error:
                 logging.error("Error notifying position change: %s", notify_error, exc_info=True)
-            
+
             # Send event to digitalStrom
             _attributes = {}
             _attributes.update({ATTR_SHADE_POSITION_OUTSIDE: value})
@@ -110,26 +113,26 @@ class WindowsCovering(DsAccessory):
         """Update window cover state from digitalStrom."""
         try:
             current_time = int(time.time())
-            
+
             # Ignore updates if user just changed the state (prevents race condition)
             if self.should_ignore_update():
-                logging.debug("Ignoring state update for %s - user action was %d seconds ago", 
-                             self.entity_id, current_time - self._last_user_action)
+                logging.debug("Ignoring state update for %s - user action was %d seconds ago",
+                              self.entity_id, current_time - self._last_user_action)
                 return
-            
+
             device_services = state_collector.get_device_state(self.entity_id)
-            
+
             # Check if state was recently updated (within last 5 seconds)
             recently_changed = current_time - 5 < device_services.get('last_change', 0)
-            
+
             # Early exit if no changes - saves CPU on Pi
             if not recently_changed:
                 shade_state = device_services.get('states', {}).get(ATTR_SHADE_POSITION_OUTSIDE)
                 if shade_state:
                     target_val = round(shade_state.get('targetvalue', 0))
                     current_val = round(shade_state.get('value', 0))
-                    if (self.target_position == target_val and 
-                        self.current_position == current_val):
+                    if (self.target_position == target_val and
+                            self.current_position == current_val):
                         return
 
             for attr, values in device_services['states'].items():
@@ -137,7 +140,7 @@ class WindowsCovering(DsAccessory):
                     _target_value = round(values['targetvalue'])
                     _current_value = round(values['value'])
                     _position_state = 2 if _target_value == _current_value else 1
-                    
+
                     # Always update if values changed, or if recently updated
                     if recently_changed or self.target_position != _target_value or self.current_position != _current_value:
                         self.target_position = _target_value
@@ -146,14 +149,14 @@ class WindowsCovering(DsAccessory):
                         self.char_current_position.set_value(self.current_position)
                         self.char_target_position.set_value(self.target_position)
                         self.char_position_state.set_value(_position_state)
-                        
+
                         # Notify clients of changes
                         try:
                             self.char_current_position.notify()
                             self.char_target_position.notify()
                             self.char_position_state.notify()
-                            logging.debug("Updated window cover %s: target=%s, current=%s, state=%s", 
-                                        self.entity_id, _target_value, _current_value, _position_state)
+                            logging.debug("Updated window cover %s: target=%s, current=%s, state=%s",
+                                          self.entity_id, _target_value, _current_value, _position_state)
                         except Exception as notify_error:
                             logging.error("Error notifying window cover changes: %s", notify_error, exc_info=True)
         except KeyError:

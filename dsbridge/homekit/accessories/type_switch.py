@@ -3,11 +3,10 @@ import time
 
 from pyhap.const import CATEGORY_SWITCH
 
-from dsbridge.homekit.const import CHAR_ON
-from dsbridge.homekit.accessories import ACC_TYPES, DsAccessory
 from dsbridge.helper import threaded
 from dsbridge.homekit import event_decider
-
+from dsbridge.homekit.accessories import ACC_TYPES, DsAccessory
+from dsbridge.homekit.const import CHAR_ON
 from ...digitalstrom import state_collector
 
 
@@ -30,10 +29,10 @@ class Switch(DsAccessory):
     @threaded
     def _set_chars(self, char_values):
         logging.debug("Switch _set_chars: %s", char_values)
-        
+
         # Mark that user just changed the state - ignore external updates for a short time
         self.mark_user_action()
-        
+
         _attributes = {}
 
         if self.char_on.value == 0:
@@ -56,15 +55,15 @@ class Switch(DsAccessory):
         """Update switch state from digitalStrom."""
         try:
             current_time = int(time.time())
-            
+
             # Ignore updates if user just changed the state (prevents race condition)
             if current_time < self._ignore_updates_until:
-                logging.debug("Ignoring state update for %s - user action was %d seconds ago", 
-                             self.entity_id, current_time - self._last_user_action)
+                logging.debug("Ignoring state update for %s - user action was %d seconds ago",
+                              self.entity_id, current_time - self._last_user_action)
                 return
-            
+
             device_state = state_collector.get_device_state(self.entity_id)
-            
+
             # Check if state was recently updated (within last 5 seconds)
             recently_changed = current_time - 5 < device_state.get('last_change', 0)
             _value = device_state['states']['on']

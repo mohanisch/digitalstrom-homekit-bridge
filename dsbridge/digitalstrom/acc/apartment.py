@@ -40,7 +40,7 @@ class Apartment:
                 "name": "Apartment " + measurement.capitalize(),
                 "service": "sensor",
                 "chars": [measurement.capitalize()],
-                "support": None,
+                "support": {},
                 "zone": "Apartment",
                 "application": measurement
             }
@@ -53,7 +53,7 @@ class Apartment:
             "application": "absent",
             "service": "switch",
             "chars": None,
-            "support": None,
+            "support": {},
             "zone": "Apartment",
         }
         _apartment_states.append(d)
