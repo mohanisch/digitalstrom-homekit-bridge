@@ -1,0 +1,64 @@
+<html xmlns="http://www.w3.org/1999/html">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="initial-scale=0, maximum-scale=1, user-scalable=yes, width=device-width">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='waitMe.min.css') }}">
+        <script src="{{ url_for('static', filename='jquery-3.4.1.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='waitMe.min.js') }}"></script>
+        <title>App</title>
+
+        <script>
+            $(document).ready(function () {
+                //sendRequest();
+                setInterval(sendRequest, 1000)
+
+                function sendRequest(){
+                    $.ajax({
+                        url: "/homekit/state",
+                        success: function(data){
+                            console.log(data);
+                            if(data == "True") {
+                                $('#main-mid').waitMe({
+                                    effect : 'rotateplane',
+                                    text : 'HomeKit verbunden...',
+                                    bg : 'rgba(255,255,255,0.7)',
+                                    color : '#000'
+                                });
+                                setTimeout(function(){
+                                    $(location).attr('href', '/');
+                                }, 3000);
+
+                            }
+                        },
+                    });
+                };
+            });
+        </script>
+    </head>
+
+  <body>
+        <div id="main">
+            <div id="main-head">
+                <div class="header">
+                    <h3>HomeKit verbinden</h3>
+                </div>
+            </div>
+            <div id="main-mid">
+                <p class="beschreibung">Um eine Verbindung zu HomeKit herzustellen, scanne den QR-Code mit Deinem iPhone oder iPad oder nutze folgenden Code: <b>{{ pincode }}</b></p>
+                <div style="">
+                    <div style="margin: 0 auto;">
+                        <div style="margin: 0 auto;width: 165px;border-radius: 15px;">{{ qrcode | safe }}</div>
+                    </div>
+                </div>
+                <div id="msg-box" style="opacity: 0;">
+                    <span id="msg-box-txt"></span>
+                </div>
+            </div>
+<!--            <div id="main-bottom">-->
+<!--                <input type="button" id="access-password" class="button-green forms" value="Weiter ...">-->
+<!--            </div>-->
+        </div>
+
+  </body>
+</html>

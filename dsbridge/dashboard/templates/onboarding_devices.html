@@ -1,0 +1,68 @@
+<html xmlns="http://www.w3.org/1999/html">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+        <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='waitMe.min.css') }}">
+        <script src="{{ url_for('static', filename='jquery-3.4.1.min.js') }}"></script>
+        <script src="{{ url_for('static', filename='dsbridge.js') }}"></script>
+        <script src="{{ url_for('static', filename='waitMe.min.js') }}"></script>
+
+        <title>HomeKit Bridge - Geräte konfigurieren</title>
+    </head>
+
+  <body>
+        <div id="main">
+            <div id="main-head">
+                <div class="header">
+                    <div class="header-content">
+                        <a href="/" class="header-back-button" title="Zurück zum Dashboard">
+                            <i class="bi bi-arrow-left"></i>
+                        </a>
+                        <h3>Geräte für HomeKit konfigurieren</h3>
+                    </div>
+                </div>
+            </div>
+            <div id="main-mid">
+                <p class="beschreibung">In der folgenden List können Geräte ausgewählt werden, welche in HomeKit erscheinen sollen. Dieses kann später in den Einstellungen noch verändert werden.</p>
+                <form id="ds_devices" name="devices" method="post">
+                {% for zone, entities in entities.items() %}
+                    <div class="zonebox">
+                        <h4>{{ zone }}</h4>
+                        <ul>
+                            {% for entity in entities %}
+                            {% set configured = "checked" if entity.configured else "" %}
+
+                            <li>
+                                <label class="checkbox" for="{{ entity.entity_id }}">
+                                    <input type="checkbox" name="{{ entity.entity_id }}" id="{{ entity.entity_id }}" value="{{ entity.entity_id }}" class="entityid" data-entityid="{{ entity.entity_id }}" {{ configured }}>
+                                    <i class="bi bi-{{ entity.application | bootstrap_icon(entity.configured) }} label-img"></i>
+                                    <span class="label-text">
+                                        {{ entity.name | replace(zone, '') }}
+                                        <em>{{ entity.model }}</em>
+                                    </span>
+                                    {% if "button" in entity.service or "manualState" in entity.service or "joker" in entity.service %}
+                                    <select name="entity_subapplication" class="subapplication" data-entityid="{{ entity.entity_id }}">
+                                        <option value="1" data-subapplication="switch" {% if entity.configured_service == 'switch' %}selected{% endif %}>Schalter</option>
+                                        <option value="2" data-subapplication="sprinkler" {% if entity.configured_service == 'sprinkler' %}selected{% endif %}>Sprinkler</option>
+                                    </select>
+                                    {% endif %}
+                                </label>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endfor %}
+                </form>
+                <div id="msg-box" style="opacity: 0;">
+                    <span id="msg-box-txt"></span>
+                </div>
+            </div>
+            <div id="main-bottom">
+                <input type="button" id="save-devices" class="button-green forms" value="Speichern">
+            </div>
+        </div>
+
+  </body>
+</html>

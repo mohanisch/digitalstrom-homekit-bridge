@@ -1,0 +1,33 @@
+default:
+  image: moby/buildkit:rootless
+
+variables:
+  BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+
+docker-build:
+  stage: build
+  before_script:
+    - |
+      if [ -f VERSION ]; then
+        export VERSION=$(cat VERSION | tr -d '[:space:]')
+      else
+        export VERSION="2.3.0"
+      fi
+      mkdir ~/.docker
+      auth=$(echo -n "$CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD" | base64)
+      echo "{\"auths\": {\"$CI_REGISTRY\": {\"auth\": \"$auth\"}}}" > ~/.docker/config.json
+  script:
+    - |
+        TMPDIR=/dev/shm buildctl-daemonless.sh build \
+            --frontend=dockerfile.v0 \
+            --opt platform=linux/arm64,linux/aarch64,linux/amd64,linux/arm/v8 \
+            --local context=. \
+            --local dockerfile=. \
+            --import-cache type=registry,ref=$CI_REGISTRY_IMAGE:$VERSION \
+            --export-cache type=inline \
+            --output type=image,name=$CI_REGISTRY_IMAGE:$VERSION,push=true
+  rules:
+    - if: $CI_COMMIT_BRANCH
+      exists:
+        - Dockerfile
+
