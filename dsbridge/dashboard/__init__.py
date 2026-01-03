@@ -9,6 +9,7 @@ import queue
 import threading
 import time
 from io import BytesIO
+import re
 
 import base36
 import prometheus_client
@@ -484,7 +485,7 @@ def get_device_status(entity_id):
         return {"ok": True, "on": is_on, "state": device_state}
     except Exception as e:
         logger.error("Error getting device status: %s", e, exc_info=True)
-        return {"ok": False, "error": str(e)}, 500
+        return {"ok": False, "error": "Internal Server Error"}, 500
 
 
 @http.route("/api/all-device-status", methods=['GET'])
@@ -510,7 +511,7 @@ def get_all_device_status():
         return {"ok": True, "devices": result}
     except Exception as e:
         logger.error("Error getting all device status: %s", e, exc_info=True)
-        return {"ok": False, "error": str(e)}, 500
+        return {"ok": False, "error": "Internal Server Error"}, 500
 
 
 @http.route("/api/status-updates", methods=['GET'])
@@ -628,7 +629,7 @@ def set_colortemp():
         return {"ok": True, "colortemp": colortemp}
     except Exception as e:
         logger.error("Error setting colortemp: %s", e, exc_info=True)
-        return {"ok": False, "error": str(e)}, 500
+        return {"ok": False, "error": "Internal Server Error"}, 500
 
 
 @http.route("/set-color", methods=['POST'])
@@ -728,7 +729,7 @@ def set_color():
         return {"ok": True, "hue": hue, "saturation": saturation}
     except Exception as e:
         logger.error("Error setting color: %s", e, exc_info=True)
-        return {"ok": False, "error": str(e)}, 500
+        return {"ok": False, "error": "Internal Server Error"}, 500
 
 
 @http.route("/set-shade-position", methods=['POST'])
@@ -772,7 +773,7 @@ def set_shade_position():
         return {"ok": True, "position": position}
     except Exception as e:
         logger.error("Error setting shade position: %s", e, exc_info=True)
-        return {"ok": False, "error": str(e)}, 500
+        return {"ok": False, "error": "Internal Server Error"}, 500
 
 
 @http.route("/set-brightness", methods=['POST'])
@@ -816,7 +817,7 @@ def set_brightness():
         return {"ok": True, "brightness": brightness}
     except Exception as e:
         logger.error("Error setting brightness: %s", e, exc_info=True)
-        return {"ok": False, "error": str(e)}, 500
+        return {"ok": False, "error": "Internal Server Error"}, 500
 
 
 @http.route("/toggle-device", methods=['POST'])
@@ -871,7 +872,7 @@ def toggle_device():
         return {"ok": True, "new_state": not is_on}
     except Exception as e:
         logger.error("Error toggling device: %s", e, exc_info=True)
-        return {"ok": False, "error": str(e)}, 500
+        return {"ok": False, "error": "Internal Server Error"}, 500
 
 
 @http.route("/restart-bridge", methods=['POST'])
@@ -919,7 +920,7 @@ def config_zones():
         )
     except Exception as e:
         logger.error("Error loading zone config: %s", e, exc_info=True)
-        return {"ok": False, "error": str(e)}, 500
+        return {"ok": False, "error": "Internal Server Error"}, 500
 
 
 @http.route("/save-zone-order", methods=['POST'])
@@ -934,22 +935,41 @@ def save_zone_order():
         if not isinstance(zone_order, list):
             return {"ok": False, "error": "zone_order must be a list"}, 400
 
+        # Validate and sanitize zone_order entries to avoid propagating
+        # arbitrary user input (which could be rendered unsafely client-side).
+        safe_zone_order = []
+        for item in zone_order:
+            # Allow simple string identifiers or integers only
+            if isinstance(item, int):
+                safe_zone_order.append(item)
+            elif isinstance(item, str):
+                cleaned = item.strip()
+                # Reject empty or excessively long values
+                if not cleaned or len(cleaned) > 255:
+                    return {"ok": False, "error": "zone_order contains invalid entries"}, 400
+                # Only allow simple identifier-like values (alphanumerics, space, underscore, hyphen)
+                if not re.fullmatch(r"[A-Za-z0-9_\- ]+", cleaned):
+                    return {"ok": False, "error": "zone_order contains invalid entries"}, 400
+                safe_zone_order.append(cleaned)
+            else:
+                return {"ok": False, "error": "zone_order contains invalid entries"}, 400
+
         # Read current config
         config_path = config.args.config_path + '/config.yml'
         config_data = read_config(config_path)
 
         # Update zone order
-        config_data['zone_order'] = zone_order
+        config_data['zone_order'] = safe_zone_order
 
         # Write back to config
         write_config(config_path, config_data)
 
-        logger.info("Saved zone order: %s", zone_order)
+        logger.info("Saved zone order: %s", safe_zone_order)
 
-        return {"ok": True, "zone_order": zone_order}
+        return {"ok": True, "zone_order": safe_zone_order}
     except Exception as e:
         logger.error("Error saving zone order: %s", e, exc_info=True)
-        return {"ok": False, "error": str(e)}, 500
+        return {"ok": False, "error": "Internal Server Error"}, 500
 
 
 @http.route("/onboarding/<step>", methods=['GET'])

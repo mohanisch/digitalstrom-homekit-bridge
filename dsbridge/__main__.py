@@ -86,6 +86,13 @@ def signal_handler(signum, frame):
     except Exception as e:
         logger.error("Error stopping homekit: %s", e)
 
+    # Shutdown thread pool executor
+    try:
+        from .helper import shutdown_thread_pool
+        shutdown_thread_pool()
+    except Exception as e:
+        logger.error("Error shutting down thread pool: %s", e)
+
     sys.exit(0)
 
 
@@ -123,6 +130,12 @@ def main():
         sys.exit(1)
     finally:
         _shutdown_event.set()
+        # Shutdown thread pool executor
+        try:
+            from .helper import shutdown_thread_pool
+            shutdown_thread_pool()
+        except Exception as e:
+            logger.error("Error shutting down thread pool: %s", e)
         check_threads()
 
 

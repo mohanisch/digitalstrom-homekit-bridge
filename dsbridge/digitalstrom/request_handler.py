@@ -14,9 +14,6 @@ from dsbridge.metrics import REQUEST_TIME, request_counter
 
 logger = logging.getLogger(__name__)
 
-# Disable SSL warnings only if verification is disabled
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 
 def retry_on_failure(max_retries: int = 2, backoff_factor: float = 0.2):  # Reduced for faster response on Pi
     """
@@ -107,6 +104,8 @@ class RequestHandler:
         self.verify_ssl = verify_ssl
 
         if not self.verify_ssl:
+            # Only disable warnings locally when SSL verification is explicitly disabled
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             logger.warning(
                 "SSL certificate verification is DISABLED. This is insecure and should only be used "
                 "for testing or with self-signed certificates in trusted networks."
