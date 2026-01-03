@@ -100,10 +100,16 @@ def read_config_file(force_reload=False):
     global _config_cache, _config_cache_time, _config_file_path
 
     import time
+    import logging
 
     # Initialize file path on first call
     if _config_file_path is None:
-        _config_file_path = args.config_path + "/config.yml"
+        try:
+            # Access args from module level - it's initialized at import time
+            _config_file_path = args.config_path + "/config.yml"
+        except (AttributeError, NameError) as e:
+            logging.error("Error accessing config path: %s", e)
+            return {}
 
     current_time = time.time()
 
@@ -121,10 +127,12 @@ def read_config_file(force_reload=False):
         try:
             with open(_config_file_path, "w") as f:
                 pass
+            # Set secure permissions on newly created file
+            os.chmod(_config_file_path, 0o600)
         except Exception as e:
-            import logging
             logging.error("Error creating config file: %s", e)
-            return {}
+            # Return cached config if available, otherwise empty dict
+            return _config_cache if _config_cache is not None else {}
 
     _file = {}
     try:
@@ -133,12 +141,12 @@ def read_config_file(force_reload=False):
             if _file is None:
                 _file = {}
     except yaml.YAMLError as exc:
-        import logging
         logging.error("Error parsing config file: %s", exc)
+        # Return cached config if available, otherwise empty dict
         return _config_cache if _config_cache is not None else {}
     except Exception as e:
-        import logging
         logging.error("Error reading config file: %s", e, exc_info=True)
+        # Return cached config if available, otherwise empty dict
         return _config_cache if _config_cache is not None else {}
 
     # Update cache
