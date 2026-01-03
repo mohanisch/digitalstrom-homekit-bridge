@@ -934,19 +934,35 @@ def save_zone_order():
         if not isinstance(zone_order, list):
             return {"ok": False, "error": "zone_order must be a list"}, 400
 
+        # Validate and sanitize zone_order entries to avoid propagating
+        # arbitrary user input (which could be rendered unsafely client-side).
+        safe_zone_order = []
+        for item in zone_order:
+            # Allow simple string identifiers or integers only
+            if isinstance(item, int):
+                safe_zone_order.append(item)
+            elif isinstance(item, str):
+                cleaned = item.strip()
+                # Reject empty or excessively long values
+                if not cleaned or len(cleaned) > 255:
+                    return {"ok": False, "error": "zone_order contains invalid entries"}, 400
+                safe_zone_order.append(cleaned)
+            else:
+                return {"ok": False, "error": "zone_order contains invalid entries"}, 400
+
         # Read current config
         config_path = config.args.config_path + '/config.yml'
         config_data = read_config(config_path)
 
         # Update zone order
-        config_data['zone_order'] = zone_order
+        config_data['zone_order'] = safe_zone_order
 
         # Write back to config
         write_config(config_path, config_data)
 
-        logger.info("Saved zone order: %s", zone_order)
+        logger.info("Saved zone order: %s", safe_zone_order)
 
-        return {"ok": True, "zone_order": zone_order}
+        return {"ok": True, "zone_order": safe_zone_order}
     except Exception as e:
         logger.error("Error saving zone order: %s", e, exc_info=True)
         return {"ok": False, "error": str(e)}, 500
