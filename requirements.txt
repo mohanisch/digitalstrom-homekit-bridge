@@ -3,7 +3,7 @@ setuptools==78.1.1
 PyQRCode~=1.2.1
 fnvhash~=0.1.0
 urllib3==2.6.0
-requests==2.32.0
+requests==2.32.4
 rgbxy
 PyYAML==6.0.1
 Flask==2.3.3
