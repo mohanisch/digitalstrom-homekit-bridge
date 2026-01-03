@@ -1,5 +1,6 @@
 import argparse
 import os
+import logging
 
 import yaml
 
@@ -117,12 +118,15 @@ def read_config_file(force_reload=False):
     file_exists = os.path.isfile(_config_file_path)
 
     if not file_exists:
-        # Create empty file if it doesn't exist
+        # Create empty file if it doesn't exist and set secure permissions
         try:
             with open(_config_file_path, "w") as f:
                 pass
+            try:
+                os.chmod(_config_file_path, 0o600)
+            except Exception:
+                logging.warning("Failed to set permissions on config file %s", _config_file_path)
         except Exception as e:
-            import logging
             logging.error("Error creating config file: %s", e)
             return {}
 
@@ -133,11 +137,9 @@ def read_config_file(force_reload=False):
             if _file is None:
                 _file = {}
     except yaml.YAMLError as exc:
-        import logging
         logging.error("Error parsing config file: %s", exc)
         return _config_cache if _config_cache is not None else {}
     except Exception as e:
-        import logging
         logging.error("Error reading config file: %s", e, exc_info=True)
         return _config_cache if _config_cache is not None else {}
 
