@@ -9,6 +9,7 @@ import queue
 import threading
 import time
 from io import BytesIO
+import re
 
 import base36
 import prometheus_client
@@ -945,6 +946,9 @@ def save_zone_order():
                 cleaned = item.strip()
                 # Reject empty or excessively long values
                 if not cleaned or len(cleaned) > 255:
+                    return {"ok": False, "error": "zone_order contains invalid entries"}, 400
+                # Only allow simple identifier-like values (alphanumerics, space, underscore, hyphen)
+                if not re.fullmatch(r"[A-Za-z0-9_\- ]+", cleaned):
                     return {"ok": False, "error": "zone_order contains invalid entries"}, 400
                 safe_zone_order.append(cleaned)
             else:
