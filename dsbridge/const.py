@@ -1,15 +1,26 @@
+from importlib.metadata import version
 from pathlib import Path
 from typing import Final
 
 
 def _get_version():
-    """Read version from VERSION file in project root."""
+    """Get version from installed package or VERSION file."""
+    # First try to get version from installed package
+    try:
+        return version("dsbridge")
+    except Exception:
+        pass
+    
+    # Fallback: try to read from VERSION file (for development)
     version_file = Path(__file__).parent.parent / "VERSION"
     if version_file.exists():
         with open(version_file, "r", encoding="utf-8") as f:
-            version = f.read().strip()
-            return version
-    return None
+            version_str = f.read().strip()
+            if version_str:
+                return version_str
+    
+    # Last resort: default version
+    return "2.6.3"
 
 
 __version__: Final = _get_version()
