@@ -19,30 +19,29 @@ def read_config(path):
 
 
 def write_config(path, data):
+    if not isWritable(path):
+        raise PermissionError(f"Config not writable: {path}")
+
     cur_yaml = {}
-    if isWritable(path):
-        # Read existing config if file exists
-        if os.path.exists(path):
-            with open(path, 'r') as file:
-                try:
-                    cur_yaml = yaml.safe_load(file)
-                except yaml.YAMLError as exc:
-                    print(exc)
+    if os.path.exists(path):
+        with open(path, 'r') as file:
+            try:
+                cur_yaml = yaml.safe_load(file)
+            except yaml.YAMLError as exc:
+                print(exc)
 
-        if cur_yaml is None:
-            cur_yaml = {}
+    if cur_yaml is None:
+        cur_yaml = {}
 
-        cur_yaml.update(data)
-        # Write config with secure permissions (0o600 = read/write for owner only)
-        # Use os.open to set permissions atomically
-        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode=0o600)
-        try:
-            with os.fdopen(fd, 'w') as file:
-                yaml.safe_dump(cur_yaml, file, indent=2)
-        except Exception:
-            # If writing fails, close the fd and re-raise
-            os.close(fd)
-            raise
+    cur_yaml.update(data)
+    # Write config with secure permissions (0o600 = read/write for owner only)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, mode=0o600)
+    try:
+        with os.fdopen(fd, 'w') as file:
+            yaml.safe_dump(cur_yaml, file, indent=2)
+    except Exception:
+        os.close(fd)
+        raise
 
 
 # Global thread pool executor for async operations

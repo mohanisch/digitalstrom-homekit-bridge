@@ -105,8 +105,7 @@ def read_config_file(force_reload=False):
     # Initialize file path on first call
     if _config_file_path is None:
         try:
-            # Access args from module level - it's initialized at import time
-            _config_file_path = args.config_path + "/config.yml"
+            _config_file_path = config_file_path()
         except (AttributeError, NameError) as e:
             logging.error("Error accessing config path: %s", e)
             return {}
@@ -164,3 +163,15 @@ def invalidate_config_cache():
 
 
 args = get_arguments()
+
+
+def config_file_path():
+    """Return the YAML config file path.
+
+    ``--config-path`` may be either a directory (``/config``) or the file itself
+    (``/config/config.yml``).
+    """
+    path = args.config_path
+    if path.endswith(('.yml', '.yaml')):
+        return path
+    return os.path.join(path, 'config.yml')

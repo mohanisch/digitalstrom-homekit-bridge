@@ -26,8 +26,11 @@ docker-compose up -d
 docker run -d \
     --name=dsbridge \
     --network=host \
-    --volume dsbridge-data:/data \
+    --volume ./config:/config \
     --environment DSS_HOSTNAME=<digitalstrom-server-ip> \
+    --environment DSS_VERIFY_SSL=false \
+    --environment CONFIG_PATH=/config \
+    --environment PERSIST_FILE_PATH=/config \
     ghcr.io/mohanisch/digitalstrom-homekit-bridge:latest
 ```
 
@@ -135,7 +138,7 @@ The bridge enables integration of your Digital Strom installation into Apple Hom
    docker-compose down
    ```
 
-Configuration is saved in `./data` (relative to the repository directory).
+Configuration is saved in `./config/config.yml` (host folder `./config` mounted to `/config` in the container).
 
 ### Docker (Manual)
 
@@ -173,8 +176,8 @@ dsbridge --dss-hostname 10.11.12.200 \
 
 - `DSS_HOSTNAME`: Hostname/IP of the Digital Strom server
 - `DSS_VERIFY_SSL`: SSL certificate verification (default: `true`, set `false` for self-signed certificates)
-- `PERSIST_FILE_PATH`: Path for persistent data (default: `/data`)
-- `CONFIG_PATH`: Path for configuration files
+- `PERSIST_FILE_PATH`: Path for HomeKit pairing state (default: `/tmp`, use `/config` in Docker)
+- `CONFIG_PATH`: Config directory or file (default from `--config-path`, typically `/config`)
 - `HOMEKIT_PORT`: Port for HomeKit (default: 51826)
 
 ### Configuration File (config.yml)

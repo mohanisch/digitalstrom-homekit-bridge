@@ -31,7 +31,8 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
     && useradd -M user --uid 1100 \
-    && mkdir /app
+    && mkdir -p /config /app \
+    && chown user:user /config
 
 COPY --from=builder /root/.local /home/user/.local
 
@@ -40,8 +41,8 @@ ENV PATH=/app/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
-WORKDIR /data
+WORKDIR /config
 
 EXPOSE 8081
 
-ENTRYPOINT ["/home/user/.local/bin/dsbridge", "--config-path", "/data/config.yml"]
+ENTRYPOINT ["/home/user/.local/bin/dsbridge", "--config-path", "/config"]

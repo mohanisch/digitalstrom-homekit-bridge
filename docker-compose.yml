@@ -15,13 +15,15 @@ services:
     # HomeKit requires mDNS/Bonjour which works best with host networking
     network_mode: host
     volumes:
-      # Persist configuration and pairing data
-      - ./data:/data
+      # Config + HomeKit pairing state
+      - ./config:/config
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONDONTWRITEBYTECODE=1
       - DSS_VERIFY_SSL=false
       - DSS_HOSTNAME=<YOUR_DSS_HOSTNAME_OR_IP>
+      - CONFIG_PATH=/config
+      - PERSIST_FILE_PATH=/config
     # Alternative: Use bridge network if host mode is not desired
     # Uncomment the following lines and comment out network_mode: host above
     # ports:

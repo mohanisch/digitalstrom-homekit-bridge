@@ -393,40 +393,60 @@ def save_devices():
     """
     Saving devices
     """
-    request_data = request.get_json()
+    try:
+        request_data = request.get_json(silent=True)
+        if not request_data:
+            return {"ok": False, "error": "Invalid request body"}, 400
 
-    devices = request_data['devices']
-    devices_subapplication = request_data['device_subapplication']
+        devices = request_data.get('devices', [])
+        devices_subapplication = request_data.get('device_subapplication', {})
 
-    entities = device_collector.get_entities()
+        entities = device_collector.get_entities()
+        entities_by_id = {v['entity_id']: v for v in entities}
 
-    device_obj = []
-    for device in devices:
-        dev = ({v['entity_id']: v for v in entities}).get(device)
-        if devices_subapplication.get(device):
-            dev['service'] = devices_subapplication.get(device)
-        # Ensure support is always a dict, not None
-        if dev.get('support') is None:
-            dev['support'] = {}
-        device_obj.append(dev)
+        device_obj = []
+        for entity_id in devices:
+            dev = entities_by_id.get(entity_id)
+            if dev is None:
+                logger.warning("Skipping unknown entity during save: %s", entity_id)
+                continue
 
-    zoneids = []
-    for i in device_obj:
-        if 'zoneid' in i:
-            zoneids.append(i['zoneid'])
+            dev = dict(dev)
+            service = devices_subapplication.get(entity_id)
+            if service:
+                dev['service'] = service
+            if dev.get('support') is None:
+                dev['support'] = {}
+            device_obj.append(dev)
 
-    zone_obj = []
-    for zoneid in zoneids:
-        zone_devices = device_collector.get_zone(zoneid)['devices']
-        zone = {
-            "id": zoneid,
-            "applications": zone_devices
-        }
-        zone_obj.append(zone)
+        zone_obj = []
+        seen_zone_ids = set()
+        for item in device_obj:
+            zone_id = item.get('zoneid')
+            if zone_id in seen_zone_ids:
+                continue
+            seen_zone_ids.add(zone_id)
+            zone = device_collector.get_zone(zone_id)
+            if zone is None:
+                logger.warning("Skipping unknown zone during save: %s", zone_id)
+                continue
+            zone_obj.append({
+                "id": zone_id,
+                "applications": zone['devices'],
+            })
 
-    write_config(config.args.config_path + '/config.yml', {'entities': device_obj, 'zones': zone_obj})
-    restart_bridge()
-    return {"ok": True}
+        config_path = config.config_file_path()
+        write_config(config_path, {'entities': device_obj, 'zones': zone_obj})
+        config.invalidate_config_cache()
+        logger.info("Saved %d devices to %s", len(device_obj), config_path)
+        restart_bridge()
+        return {"ok": True}
+    except PermissionError as err:
+        logger.error("Cannot write config: %s", err)
+        return {"ok": False, "error": str(err)}, 500
+    except Exception as err:
+        logger.error("Error saving devices: %s", err, exc_info=True)
+        return {"ok": False, "error": str(err)}, 500
 
 
 @http.route("/api/requesttoken", methods=['GET', 'POST'])
@@ -442,7 +462,7 @@ def request_token():
 
     if response['ok']:
         data = {"token": response['token']}
-        write_config(config.args.config_path + '/config.yml', data)
+        write_config(config.config_file_path(), data)
 
     return response
 
@@ -933,7 +953,7 @@ def save_zone_order():
                 return {"ok": False, "error": "zone_order contains invalid entries"}, 400
 
         # Read current config
-        config_path = config.args.config_path + '/config.yml'
+        config_path = config.config_file_path()
         config_data = read_config(config_path)
 
         # Update zone order
@@ -978,7 +998,7 @@ def onboarding(step):
             logger.error("Error loading apartment data: %s", e, exc_info=True)
 
         entities = device_collector.get_entities()
-        cur_config = read_config(config.args.config_path + '/config.yml')
+        cur_config = read_config(config.config_file_path())
 
         # Create a lookup dict for configured entities and their service type
         configured_services = {}
