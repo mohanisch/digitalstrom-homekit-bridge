@@ -198,6 +198,71 @@ def bootstrap_icon_filter(application, is_active=True):
 
 http.jinja_env.filters['bootstrap_icon'] = bootstrap_icon_filter
 
+EMPTY_ENTITY_STATE = {
+    'states': {'on': False},
+    'attributes': {},
+    'last_change': 0,
+}
+
+SENSOR_CHAR_NAMES = frozenset({'Temperature', 'Humidity', 'Brightness', 'Motion'})
+
+
+def attach_entity_state(item, states):
+    """Ensure every dashboard entity has a state object for Jinja templates."""
+    entity_id = item['entity_id']
+    is_available = entity_id in states
+    item['available'] = is_available
+    item['state'] = states[entity_id] if is_available else EMPTY_ENTITY_STATE.copy()
+    return is_available
+
+
+def is_sensor_entity(item):
+    """Zone/apartment sensors and device sensors belong in the sensor section."""
+    if item.get('service') == 'sensor':
+        return True
+    chars = item.get('chars') or []
+    return bool(SENSOR_CHAR_NAMES.intersection(chars))
+
+
+def enrich_output_device(item, states):
+    """Add derived light/shade attributes used by the dashboard template."""
+    if item.get('application') == 'shades' and item['entity_id'] in states:
+        shade_state = states[item['entity_id']].get('states', {})
+        if 'shadePositionOutside' in shade_state:
+            item['shade_position'] = shade_state['shadePositionOutside'].get('value', 0)
+
+    support = item.get('support') or {}
+    has_rgb_color = support.get('color', False) and (
+        support.get('hue', False) or support.get('saturation', False))
+    has_colortemp = support.get('colortemp', False)
+
+    if item.get('application') != 'lights':
+        return
+
+    if has_rgb_color:
+        if item['entity_id'] in states:
+            color_state = states[item['entity_id']].get('states', {})
+            if 'hue' in color_state:
+                item['hue'] = color_state['hue'].get('value', 0)
+            if 'saturation' in color_state:
+                item['saturation'] = color_state['saturation'].get('value', 0)
+        item['supports_rgb_color'] = True
+    else:
+        item['supports_rgb_color'] = False
+
+    if has_colortemp:
+        if item['entity_id'] in states:
+            colortemp_state = states[item['entity_id']].get('states', {})
+            if 'colortemp' in colortemp_state:
+                colortemp_mired = colortemp_state['colortemp'].get('value', 0)
+                if isinstance(colortemp_mired, (int, float)) and 140 <= colortemp_mired <= 500:
+                    item['colortemp'] = int(round((500 - colortemp_mired) / 3.6))
+                else:
+                    item['colortemp'] = 0
+        item['supports_colortemp'] = True
+    else:
+        item['supports_colortemp'] = False
+
 
 @http.route("/")
 def root():
@@ -218,55 +283,13 @@ def root():
     devices_by_zone = {}
 
     for item in entities:
-        # Check if device is available (has state from digitalSTROM)
-        is_available = item['entity_id'] in states
-        item['available'] = is_available
-
-        if is_available:
-            item.update({"state": states[item['entity_id']]})
+        attach_entity_state(item, states)
 
         zone = item['zone']
-        # Separate sensors from devices
-        if item.get('service') == 'sensor':
+        if is_sensor_entity(item):
             sensors_by_zone.setdefault(zone, []).append(item)
         else:
-            # Check if device has shadePositionOutside (shades)
-            if item.get('application') == 'shades' and item['entity_id'] in states:
-                shade_state = states[item['entity_id']].get('states', {})
-                if 'shadePositionOutside' in shade_state:
-                    # Add shade position info
-                    item['shade_position'] = shade_state['shadePositionOutside'].get('value', 0)
-            # Check if device supports RGB color and/or colortemp
-            support = item.get('support', {})
-            has_rgb_color = support.get('color', False) and (
-                        support.get('hue', False) or support.get('saturation', False))
-            has_colortemp = support.get('colortemp', False)
-
-            if item.get('application') == 'lights':
-                if has_rgb_color:
-                    if item['entity_id'] in states:
-                        color_state = states[item['entity_id']].get('states', {})
-                        if 'hue' in color_state:
-                            item['hue'] = color_state['hue'].get('value', 0)
-                        if 'saturation' in color_state:
-                            item['saturation'] = color_state['saturation'].get('value', 0)
-                    item['supports_rgb_color'] = True
-                else:
-                    item['supports_rgb_color'] = False
-
-                if has_colortemp:
-                    if item['entity_id'] in states:
-                        colortemp_state = states[item['entity_id']].get('states', {})
-                        if 'colortemp' in colortemp_state:
-                            # Convert mired (140-500) to percent (0-100) for display
-                            colortemp_mired = colortemp_state['colortemp'].get('value', 0)
-                            if isinstance(colortemp_mired, (int, float)) and 140 <= colortemp_mired <= 500:
-                                item['colortemp'] = int(round((500 - colortemp_mired) / 3.6))
-                            else:
-                                item['colortemp'] = 0
-                    item['supports_colortemp'] = True
-                else:
-                    item['supports_colortemp'] = False
+            enrich_output_device(item, states)
             devices_by_zone.setdefault(zone, []).append(item)
 
     # Combine sensors and devices for each zone
@@ -313,12 +336,7 @@ def zone_view(zone_name):
     devices_by_zone = {}
 
     for item in entities:
-        # Check if device is available (has state from digitalSTROM)
-        is_available = item['entity_id'] in states
-        item['available'] = is_available
-
-        if is_available:
-            item['state'] = states[item['entity_id']]
+        attach_entity_state(item, states)
 
         zone = item['zone']
 
@@ -326,50 +344,10 @@ def zone_view(zone_name):
         if zone != zone_name:
             continue
 
-        if is_available:
-            item.update({"state": states[item['entity_id']]})
-
-        # Separate sensors from devices
-        if item.get('service') == 'sensor':
+        if is_sensor_entity(item):
             sensors_by_zone.setdefault(zone, []).append(item)
         else:
-            # Check if device has shadePositionOutside (shades)
-            if item.get('application') == 'shades' and item['entity_id'] in states:
-                shade_state = states[item['entity_id']].get('states', {})
-                if 'shadePositionOutside' in shade_state:
-                    # Add shade position info
-                    item['shade_position'] = shade_state['shadePositionOutside'].get('value', 0)
-            # Check if device supports RGB color and/or colortemp
-            support = item.get('support', {})
-            has_rgb_color = support.get('color', False) and (
-                        support.get('hue', False) or support.get('saturation', False))
-            has_colortemp = support.get('colortemp', False)
-
-            if item.get('application') == 'lights':
-                if has_rgb_color:
-                    if item['entity_id'] in states:
-                        color_state = states[item['entity_id']].get('states', {})
-                        if 'hue' in color_state:
-                            item['hue'] = color_state['hue'].get('value', 0)
-                        if 'saturation' in color_state:
-                            item['saturation'] = color_state['saturation'].get('value', 0)
-                    item['supports_rgb_color'] = True
-                else:
-                    item['supports_rgb_color'] = False
-
-                if has_colortemp:
-                    if item['entity_id'] in states:
-                        colortemp_state = states[item['entity_id']].get('states', {})
-                        if 'colortemp' in colortemp_state:
-                            # Convert mired (140-500) to percent (0-100) for display
-                            colortemp_mired = colortemp_state['colortemp'].get('value', 0)
-                            if isinstance(colortemp_mired, (int, float)) and 140 <= colortemp_mired <= 500:
-                                item['colortemp'] = int(round((500 - colortemp_mired) / 3.6))
-                            else:
-                                item['colortemp'] = 0
-                    item['supports_colortemp'] = True
-                else:
-                    item['supports_colortemp'] = False
+            enrich_output_device(item, states)
             devices_by_zone.setdefault(zone, []).append(item)
 
     # Check if zone exists

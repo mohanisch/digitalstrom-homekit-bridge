@@ -1379,7 +1379,8 @@
             {% if zone_data.devices %}
             <div class="devices-grid">
                 {% for device in zone_data.devices %}
-                {% set state = "active" if 'on' in device.state.states and device.state.states['on'] else "inactive" %}
+                {% set device_states = device.state.states if device.state else {} %}
+                {% set state = "active" if device_states.get('on') else "inactive" %}
                 {% set is_dimmable = device.get('support', {}).get('brightness', False) %}
                 {% set is_shade = device.get('application') == 'shades' %}
                 {% set supports_color = device.get('application') == 'lights' and device.get('supports_rgb_color',
@@ -1391,23 +1392,23 @@
                 {% set shade_position = 0 %}
                 {% set hue = 0 %}
                 {% set saturation = 0 %}
-                {% if is_dimmable and device.state.states.get('brightness') %}
-                {% set brightness = device.state.states.brightness.get('value', 0) %}
+                {% if is_dimmable and device_states.get('brightness') %}
+                {% set brightness = device_states.brightness.get('value', 0) %}
                 {% endif %}
-                {% if is_shade and device.state.states.get('shadePositionOutside') %}
-                {% set shade_position = device.state.states.shadePositionOutside.get('value', 0) %}
+                {% if is_shade and device_states.get('shadePositionOutside') %}
+                {% set shade_position = device_states.shadePositionOutside.get('value', 0) %}
                 {% set state = "active" if shade_position > 0 else "inactive" %}
                 {% endif %}
                 {% if supports_color %}
                 {% if device.get('hue') is not none %}
                 {% set hue = device.hue %}
-                {% elif device.state.states.get('hue') %}
-                {% set hue = device.state.states.hue.get('value', 0) %}
+                {% elif device_states.get('hue') %}
+                {% set hue = device_states.hue.get('value', 0) %}
                 {% endif %}
                 {% if device.get('saturation') is not none %}
                 {% set saturation = device.saturation %}
-                {% elif device.state.states.get('saturation') %}
-                {% set saturation = device.state.states.saturation.get('value', 0) %}
+                {% elif device_states.get('saturation') %}
+                {% set saturation = device_states.saturation.get('value', 0) %}
                 {% endif %}
                 {% endif %}
                 {% set is_available = device.get('available', False) %}
@@ -1444,6 +1445,7 @@
 </div>
 {% for zone, zone_data in entities.items() %}
 {% for device in zone_data.devices %}
+{% set device_states = device.state.states if device.state else {} %}
 {% set is_dimmable = device.get('support', {}).get('brightness', False) %}
 {% set is_shade = device.get('application') == 'shades' %}
 {% set supports_color = device.get('application') == 'lights' and device.get('supports_rgb_color', False) %}
@@ -1454,8 +1456,8 @@
 {% if has_color_options and supports_colortemp %}
 {% if device.get('colortemp') is not none %}
 {% set colortemp = device.colortemp %}
-{% elif device.state.states.get('colortemp') %}
-{% set colortemp_mired = device.state.states.colortemp.get('value', 0) %}
+{% elif device_states.get('colortemp') %}
+{% set colortemp_mired = device_states.colortemp.get('value', 0) %}
 {% if colortemp_mired >= 140 and colortemp_mired <= 500 %}
 {% set colortemp = ((500 - colortemp_mired) / 3.6) | round | int %}
 {% else %}
@@ -1465,11 +1467,11 @@
 {% endif %}
 {% set brightness = 0 %}
 {% set shade_position = 0 %}
-{% if is_dimmable and device.state.states.get('brightness') %}
-{% set brightness = device.state.states.brightness.get('value', 0) %}
+{% if is_dimmable and device_states.get('brightness') %}
+{% set brightness = device_states.brightness.get('value', 0) %}
 {% endif %}
-{% if is_shade and device.state.states.get('shadePositionOutside') %}
-{% set shade_position = device.state.states.shadePositionOutside.get('value', 0) %}
+{% if is_shade and device_states.get('shadePositionOutside') %}
+{% set shade_position = device_states.shadePositionOutside.get('value', 0) %}
 {% endif %}
 <div class="device-color-menu-overlay" data-entity-id="{{ device.entity_id }}" style="display: none;"></div>
 <div class="device-color-menu" data-entity-id="{{ device.entity_id }}"
