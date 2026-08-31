@@ -423,6 +423,8 @@ def save_devices():
         seen_zone_ids = set()
         for item in device_obj:
             zone_id = item.get('zoneid')
+            if zone_id is None:
+                continue
             if zone_id in seen_zone_ids:
                 continue
             seen_zone_ids.add(zone_id)

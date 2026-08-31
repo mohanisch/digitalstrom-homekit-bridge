@@ -228,8 +228,13 @@ class DssCollector:
     def get_devices(self):
         return self._devices
 
-    def get_zone(self, zoneid: int):
-        return ({int(v['id']): v for v in self._zones}).get(int(zoneid))
+    def get_zone(self, zoneid):
+        if zoneid is None:
+            return None
+        try:
+            return ({int(v['id']): v for v in self._zones}).get(int(zoneid))
+        except (TypeError, ValueError):
+            return None
 
     def get_device_application(self, device_id):
         return ({v['id']: v['attributes']['application'] for v in self._submodules}).get(device_id)
