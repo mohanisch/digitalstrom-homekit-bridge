@@ -112,6 +112,11 @@ class DsWebsocket:
             }
             ws.send(json.dumps(obj))
             logger.info("Websocket connected successfully")
+            try:
+                from ..acc.device_sensors import start_periodic_refresh
+                start_periodic_refresh(state_collector)
+            except Exception as e:
+                logger.debug("Could not start device sensor refresh: %s", e)
         except Exception as e:
             logger.error("Error sending initial websocket message: %s", e, exc_info=True)
 

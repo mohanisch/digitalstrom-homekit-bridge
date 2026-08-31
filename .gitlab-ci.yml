@@ -11,7 +11,7 @@ docker-build:
       if [ -f VERSION ]; then
         export VERSION=$(cat VERSION | tr -d '[:space:]')
       else
-        export VERSION="2.3.0"
+        export VERSION="2.6.8"
       fi
       mkdir ~/.docker
       auth=$(echo -n "$CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD" | base64)

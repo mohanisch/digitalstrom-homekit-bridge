@@ -60,6 +60,11 @@ def start_homekit():
         try:
             homekit.setup()
             state_collector.gather_devices_status()
+            try:
+                from dsbridge.digitalstrom.acc.device_sensors import start_periodic_refresh
+                start_periodic_refresh(state_collector)
+            except Exception as e:
+                logger.debug("Could not start device sensor refresh: %s", e)
             add_devices()
             logger.info("Starting homekit...")
             homekit.start()

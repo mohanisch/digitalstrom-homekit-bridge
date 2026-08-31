@@ -127,6 +127,12 @@ class DssStateCollector:
             except Exception as e:
                 logger.error("Error gathering output device states: %s", e, exc_info=True)
 
+            try:
+                from .acc.device_sensors import gather_state as gather_device_sensor_states
+                self._device_states.update(gather_device_sensor_states(last_change))
+            except Exception as e:
+                logger.error("Error gathering device sensor states: %s", e, exc_info=True)
+
             # Optimize zone processing with dictionary lookup
             zones_dict = {str(v['id']): v for v in zones_status}
 
@@ -221,6 +227,7 @@ class DssCollector:
         _devices = self._transform_output_devices() + \
                    self._transform_user_defined_states() + \
                    self._transform_measurements() + \
+                   self._transform_device_sensors() + \
                    self._transform_apartment()
 
         return _devices
@@ -246,6 +253,10 @@ class DssCollector:
         from .acc.output_devices import OutputDevices
         output_devices = OutputDevices(self._devices)
         return output_devices.entities()
+
+    def _transform_device_sensors(self):
+        from .acc.device_sensors import get_entities as get_device_sensor_entities
+        return get_device_sensor_entities(self.get_zone)
 
     def _transform_measurements(self):
         zones_status = collect_data("/zones/status")

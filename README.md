@@ -56,6 +56,7 @@ docker run -d \
    - Light clamps (dimmable, color, color temperature)
    - Shade clamps (blinds/shutters)
    - Sensors (temperature, humidity, brightness, motion)
+   - **Per-device sensors** (e.g. fridge temperature, Aqara weather station) — separate from zone reference sensors
    - Custom states (switches, etc.)
 4. You can configure device names and organize them by zones
 5. Click **Save Configuration**
@@ -176,6 +177,9 @@ dsbridge --dss-hostname 10.11.12.200 \
 
 - `DSS_HOSTNAME`: Hostname/IP of the Digital Strom server
 - `DSS_VERIFY_SSL`: SSL certificate verification (default: `true`, set `false` for self-signed certificates)
+- `DSS_DEVICE_SENSORS_ENABLED`: Export individual vdSD device sensors via JSON API (default: `true`)
+- `DSS_DEVICE_SENSORS_LIVE`: Live bus reads via `getSensorValue2` (slow; default: `false`)
+- `DSS_DEVICE_SENSORS_REFRESH_SECONDS`: Poll interval for sensor values between websocket events (default: `60`)
 - `PERSIST_FILE_PATH`: Path for HomeKit pairing state (default: `/tmp`, use `/config` in Docker)
 - `CONFIG_PATH`: Config directory or file (default from `--config-path`, typically `/config`)
 - `HOMEKIT_PORT`: Port for HomeKit (default: 51826)
